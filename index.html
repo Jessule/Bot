@@ -346,6 +346,22 @@
   </div>
 </div>
 
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav" id="mobile-nav">
+  <button class="mobile-nav-btn active" id="mnav-control" onclick="mobileTab('control')">
+    <span class="mobile-nav-icon">⚙️</span>
+    Control
+  </button>
+  <button class="mobile-nav-btn" id="mnav-chart" onclick="mobileTab('chart')">
+    <span class="mobile-nav-icon">📈</span>
+    Gráfico
+  </button>
+  <button class="mobile-nav-btn" id="mnav-positions" onclick="mobileTab('positions')">
+    <span class="mobile-nav-icon">💼</span>
+    Posiciones
+  </button>
+</nav>
+
 <!-- TradingView Widget Script -->
 <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 <script src="js/storage.js"></script>
@@ -354,7 +370,55 @@
 <script src="js/ai.js"></script>
 <script src="js/app.js"></script>
 
+<script>
+(function() {
+  var panelLeft     = document.querySelector('.panel-left');
+  var panelRight    = document.querySelector('.panel-right');
+  var btnControl    = document.getElementById('mnav-control');
+  var btnChart      = document.getElementById('mnav-chart');
+  var btnPositions  = document.getElementById('mnav-positions');
 
+  function isMobile() { return window.innerWidth <= 768; }
+
+  window.mobileTab = function(tab) {
+    if (!isMobile()) return;
+    [btnControl, btnChart, btnPositions].forEach(function(b) { b.classList.remove('active'); });
+    panelLeft.classList.remove('mobile-active');
+    panelRight.classList.remove('mobile-active');
+
+    if (tab === 'control') {
+      panelLeft.classList.add('mobile-active');
+      btnControl.classList.add('active');
+    } else if (tab === 'chart') {
+      panelRight.classList.add('mobile-active');
+      btnChart.classList.add('active');
+      // scroll chart into view
+      var chartArea = document.getElementById('chart-area');
+      if (chartArea) chartArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (tab === 'positions') {
+      panelRight.classList.add('mobile-active');
+      btnPositions.classList.add('active');
+      var posPanel = document.querySelector('.positions-panel');
+      if (posPanel) setTimeout(function() { posPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+    }
+  };
+
+  // Init on load
+  if (isMobile()) {
+    panelLeft.classList.add('mobile-active');
+  }
+
+  // Re-init on resize
+  window.addEventListener('resize', function() {
+    if (!isMobile()) {
+      panelLeft.classList.remove('mobile-active');
+      panelRight.classList.remove('mobile-active');
+    } else if (!panelLeft.classList.contains('mobile-active') && !panelRight.classList.contains('mobile-active')) {
+      panelLeft.classList.add('mobile-active');
+    }
+  });
+})();
+</script>
 
 </body>
 </html>
