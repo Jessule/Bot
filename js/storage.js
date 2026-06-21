@@ -13,6 +13,7 @@ let state = {
   trades_won: 0,
   positions: [],
   closed_trades: [],
+  movements: [],
   current_signal: null,
   current_ticker: null,
   current_price: null,
@@ -27,6 +28,8 @@ let state = {
   _realtimeChart: null,
   _realtimeData: [],
   _priceHistory: [],
+  _liveTicks: [],
+  chart_view: 'tradingview',
   session_start: new Date().toDateString(),
   qty_mode: 'pct',
   qty_value: 10,
@@ -44,6 +47,7 @@ function saveState(silent = false) {
       trades_won: state.trades_won,
       positions: state.positions,
       closed_trades: state.closed_trades,
+      movements: state.movements,
       chart_tf: state.chart_tf,
       leverage: state.leverage,
       qty_mode: state.qty_mode,
@@ -74,6 +78,7 @@ function loadState() {
     state.trades_won = saved.trades_won ?? 0;
     state.positions = saved.positions ?? [];
     state.closed_trades = saved.closed_trades ?? [];
+    state.movements = saved.movements ?? [];
     state.chart_tf = saved.chart_tf ?? 'D';
     state.leverage = saved.leverage ?? 1;
     state.qty_mode = saved.qty_mode ?? 'pct';
@@ -107,11 +112,14 @@ function resetState() {
   state.trades_won = 0;
   state.positions = [];
   state.closed_trades = [];
+  state.movements = [];
+  state._liveTicks = [];
   state.current_signal = null;
   document.getElementById('capital-input').value = INITIAL_CAPITAL;
   document.getElementById('save-dot').className = 'save-dot';
   document.getElementById('save-text').textContent = 'Sin guardar';
   renderPositions();
+  if (typeof renderMovements === 'function') renderMovements();
   updatePortfolio();
   log('↺ Portfolio reseteado a valores iniciales', 'info');
 }

@@ -337,20 +337,20 @@ function setQtyMode(mode) {
 function getEffectiveQty(s) {
   if (!s) return 1;
   const mode = state.qty_mode;
-  const isCr = typeof isCrypto === 'function' ? isCrypto(s.ticker) : (s.ticker||'').includes('-');
-  const round = (v) => isCr ? Math.round(v * 100) / 100 : Math.floor(v);
-  const minQ  = isCr ? 0.01 : 1;
+  // Acciones fraccionarias permitidas para todo (cripto y acciones) → ej. 1.3 acciones
+  const round = (v) => Math.round(v * 100) / 100;
+  const minQ  = 0.01;
 
   if (mode === 'usd') {
     const usd     = parseFloat(document.getElementById('qty-usd-input')?.value) || state.capital;
     const limited = Math.min(usd, state.capital);
     return Math.max(minQ, round(limited / s.entry));
   } else if (mode === 'shares') {
-    const raw  = parseFloat(document.getElementById('qty-shares-input')?.value) || 1;
-    const shares = isCr ? raw : Math.floor(raw); // allow decimal input for crypto
-    const cost = shares * s.entry;
+    const raw    = parseFloat(document.getElementById('qty-shares-input')?.value) || 1;
+    const shares = round(raw); // acepta decimales (fraccionarias)
+    const cost   = shares * s.entry;
     if (cost > state.capital) return Math.max(minQ, round(state.capital / s.entry));
-    return Math.max(minQ, isCr ? Math.round(shares * 100) / 100 : Math.floor(shares));
+    return Math.max(minQ, shares);
   } else {
     // pct mode
     const pct = parseFloat(document.getElementById('qty-pct-input')?.value) || 10;
@@ -389,12 +389,9 @@ function executeTrade(side, fromBot = false) {
   let qty    = getEffectiveQty(s);
   let cost   = qty * s.entry;
 
-  const isCrTrade = typeof isCrypto === 'function' ? isCrypto(s.ticker) : (s.ticker||'').includes('-');
-  const minQty = isCrTrade ? 0.01 : 1;
+  const minQty = 0.01; // acciones fraccionarias permitidas
   if (cost > state.capital) {
-    qty  = isCrTrade
-      ? Math.max(0.01, Math.round((state.capital / s.entry) * 100) / 100)
-      : Math.max(1, Math.floor(state.capital / s.entry));
+    qty  = Math.max(0.01, Math.round((state.capital / s.entry) * 100) / 100);
     cost = qty * s.entry;
     if (qty < minQty || cost > state.capital * 1.001) {
       log(`❌ Capital insuficiente ($${state.capital.toFixed(2)}) para abrir posición`, 'info');
@@ -426,6 +423,19 @@ function executeTrade(side, fromBot = false) {
   state.capital -= cost;
   state.positions.push(pos);
   state.trades_total++;
+
+  // Registrar movimiento de apertura en el historial
+  // LONG = acciones compradas · SHORT = acciones vendidas (en corto)
+  addMovement({
+    kind:    'OPEN',
+    action:  side === 'BUY' ? 'compradas' : 'vendidas',
+    ticker:  s.ticker,
+    price:   s.entry,
+    qty,
+    side,
+    fromBot,
+    posId:   pos.id
+  });
 
   const label = fromBot ? '🤖 BOT' : '👤 MANUAL';
   const qtyDisp = (typeof qty === 'number' && qty % 1 !== 0) ? qty.toFixed(2) : qty;
@@ -461,6 +471,20 @@ function closePosition(id) {
   state.closed_trades.push({ ...p, pnl, close_price: p.current });
   state.positions.splice(idx, 1);
 
+  // Registrar movimiento de cierre con PyG realizado
+  // Cerrar LONG = vender · Cerrar SHORT = comprar
+  addMovement({
+    kind:    'CLOSE',
+    action:  p.side === 'BUY' ? 'vendidas' : 'compradas',
+    ticker:  p.ticker,
+    price:   p.current,
+    qty:     p.qty,
+    side:    p.side,
+    fromBot: p.fromBot,
+    pnl,
+    posId:   p.id
+  });
+
   const pct    = (pnl / p.value * 100).toFixed(2);
   const result = pnl >= 0 ? '✅ Ganancia' : '❌ Pérdida';
   const who    = p.fromBot ? ' [BOT]' : '';
@@ -472,6 +496,75 @@ function closePosition(id) {
   renderPositions();
   updatePortfolio();
   markUnsaved();
+}
+
+// ══════════════════════════════════════════
+// HISTORIAL DE MOVIMIENTOS
+// ══════════════════════════════════════════
+function addMovement(m) {
+  if (!state.movements) state.movements = [];
+  state.movements.unshift({
+    id:   Date.now() + Math.random(),
+    time: new Date().toISOString(),
+    ...m
+  });
+  if (state.movements.length > 300) state.movements.length = 300;
+  renderMovements();
+  markUnsaved();
+}
+
+function deleteMovement(id) {
+  if (!state.movements) return;
+  state.movements = state.movements.filter(m => String(m.id) !== String(id));
+  renderMovements();
+  markUnsaved();
+}
+
+function clearMovements() {
+  if (!state.movements || state.movements.length === 0) return;
+  if (!confirm('¿Vaciar todo el historial de movimientos?')) return;
+  state.movements = [];
+  renderMovements();
+  markUnsaved();
+  log('🗑️ Historial de movimientos vaciado', 'info');
+}
+
+function renderMovements() {
+  const body  = document.getElementById('movements-body');
+  const countEl = document.getElementById('movements-count');
+  if (!body) return;
+
+  const movs = state.movements || [];
+  if (countEl) countEl.textContent = `${movs.length} mov.`;
+
+  if (movs.length === 0) {
+    body.innerHTML = '<div style="text-align:center;color:var(--text3);padding:14px;font-size:0.7rem;">Sin movimientos todavía</div>';
+    return;
+  }
+
+  body.innerHTML = movs.map(m => {
+    const t      = new Date(m.time).toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
+    const qtyStr = (typeof m.qty === 'number' && m.qty % 1 !== 0) ? m.qty.toFixed(2) : m.qty;
+    const price  = '$' + Number(m.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4});
+    const botTag = m.fromBot
+      ? '<span style="color:#60a5fa;font-size:0.6rem;">(bot)</span>'
+      : '';
+    const actColor = m.action === 'compradas' ? 'var(--accent)' : 'var(--red)';
+    // Línea principal: TICKER (bot) — $precio × N compradas/vendidas
+    let line = `<span style="color:var(--text);font-weight:600;">${m.ticker}</span> ${botTag} `
+             + `<span style="color:var(--text2);">— ${price} × ${qtyStr} `
+             + `<span style="color:${actColor};font-weight:600;">${m.action}</span></span>`;
+    // PyG solo en cierres
+    let pnlStr = '';
+    if (m.kind === 'CLOSE' && typeof m.pnl === 'number') {
+      const pc = m.pnl >= 0 ? 'var(--accent)' : 'var(--red)';
+      pnlStr = ` · <span style="color:${pc};font-weight:700;">PyG ${fmt$(m.pnl)}</span>`;
+    }
+    return `<div class="mov-row">
+      <div class="mov-text"><span class="mov-time">${t}</span> ${line}${pnlStr}</div>
+      <button class="mov-del" title="Quitar del historial" onclick="deleteMovement('${m.id}')">✕</button>
+    </div>`;
+  }).join('');
 }
 
 function simulatePriceUpdates() {
@@ -549,13 +642,14 @@ function renderPositions() {
     const label  = p.side === 'BUY' ? 'LONG' : 'SHORT';
     const tf     = p.timeframe || '—';
     const conf   = p.confidence !== undefined ? p.confidence + '%' : '—';
+    const botTag = p.fromBot ? ' <span style="color:#60a5fa;font-size:0.62rem;font-weight:700;">(bot)</span>' : '';
     return `<tr>
-      <td class="td-ticker">${p.ticker}<br><span style="font-size:0.6rem;color:var(--text3);">${tf} · ${conf}</span></td>
+      <td class="td-ticker">${p.ticker}${botTag}<br><span style="font-size:0.6rem;color:var(--text3);">${tf} · ${conf}</span></td>
       <td style="color:${color};font-weight:600">${label}</td>
       <td style="color:var(--yellow)">x${lev}</td>
       <td>$${p.entry.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4})}</td>
       <td>$${p.current.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4})}</td>
-      <td>${p.qty}</td>
+      <td>${(typeof p.qty === 'number' && p.qty % 1 !== 0) ? p.qty.toFixed(2) : p.qty}</td>
       <td style="color:var(--red)">$${p.sl.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4})}</td>
       <td style="color:var(--accent)">$${p.tp.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4})}</td>
       <td class="${cls}">${fmt$(pnl)}</td>
@@ -574,6 +668,17 @@ function updatePortfolio() {
     return sum + pnl;
   }, 0);
 
+  // Valor total de cuenta = capital disponible + valor de mercado de posiciones abiertas
+  // (coste invertido + PyG no realizado)
+  const positionsValue = state.positions.reduce((sum, p) => {
+    const lev = p.leverage || 1;
+    const pnl = p.side === 'BUY'
+      ? (p.current - p.entry) * p.qty * lev
+      : (p.entry  - p.current) * p.qty * lev;
+    return sum + p.value + pnl;
+  }, 0);
+  const accountValue = state.capital + positionsValue;
+
   const totalPnl    = state.realized_pnl + unrealized;
   const totalPct    = (totalPnl  / state.initial_capital) * 100;
   const dayPct      = (state.day_pnl / state.initial_capital) * 100;
@@ -586,6 +691,15 @@ function updatePortfolio() {
   const set = (id, val) => { const el = $(id); if (el) el.textContent = val; };
 
   set('hdr-capital', fmt$(state.capital));
+
+  const accEl = $('stat-account-value');
+  if (accEl) {
+    accEl.textContent = fmt$(accountValue);
+    accEl.style.color = accountValue >= state.initial_capital ? 'var(--accent)' : 'var(--red)';
+  }
+  const accPctEl = $('stat-account-value-pct');
+  if (accPctEl) accPctEl.textContent = fmtPct(((accountValue - state.initial_capital) / state.initial_capital) * 100);
+  set('hdr-account-value', fmt$(accountValue));
 
   const pnlEl = $('hdr-pnl');
   if (pnlEl) { pnlEl.textContent = fmt$(totalPnl); pnlEl.className = 'portfolio-value ' + (totalPnl >= 0 ? 'green' : 'red'); }

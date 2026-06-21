@@ -93,8 +93,8 @@
     </div>
     <button onclick="saveState()" class="btn" style="padding:4px 10px;font-size:0.65rem;background:var(--surface2);border:1px solid var(--border);color:var(--text2);">💾 Guardar</button>
     <button onclick="resetState()" class="btn" style="padding:4px 10px;font-size:0.65rem;background:var(--red-dim);border:1px solid rgba(255,77,106,0.2);color:var(--red);">↺ Reset</button>
-    <a href="game.html" class="btn" style="padding:4px 10px;font-size:0.65rem;background:var(--accent-dim);border:1px solid rgba(0,212,160,0.25);color:var(--accent);text-decoration:none;">🎮 Circle Essence</a>
-    <a href="trading212.html" class="btn" style="padding:4px 10px;font-size:0.65rem;background:var(--surface2);border:1px solid var(--border);color:var(--text2);text-decoration:none;">T212 API</a>
+    <a href="game.html" class="btn hdr-extra" style="padding:4px 10px;font-size:0.65rem;background:var(--accent-dim);border:1px solid rgba(0,212,160,0.25);color:var(--accent);text-decoration:none;">🎮 Circle Essence</a>
+    <a href="trading212.html" class="btn hdr-extra" style="padding:4px 10px;font-size:0.65rem;background:var(--surface2);border:1px solid var(--border);color:var(--text2);text-decoration:none;">📡 T212 API</a>
   </div>
 </div>
 
@@ -172,12 +172,13 @@
 
     <!-- QUANTITY CONTROL -->
     <div class="section">
-      <div class="section-title">Tamaño de posición</div>
+      <div class="section-title">Tamaño de posición · Bot y Manual</div>
+      <div style="font-size:0.6rem;color:var(--text3);margin-bottom:7px;line-height:1.4;">El bot y las órdenes manuales usan este tamaño. Las acciones pueden ser fraccionarias (ej. 1.3).</div>
       <div style="margin-bottom:10px;">
         <select class="risk-input" id="qty-mode-select" onchange="setQtyMode(this.value)">
           <option value="pct">% del Capital</option>
           <option value="usd">Cantidad USD</option>
-          <option value="shares">Acciones Manuales</option>
+          <option value="shares">Nº de Acciones</option>
         </select>
       </div>
       <div id="qty-pct-row">
@@ -193,8 +194,8 @@
         <input type="number" id="qty-usd-input" class="risk-input" value="1000" min="10" step="10" onchange="syncQtyInput()">
       </div>
       <div id="qty-shares-row" style="display:none;">
-        <label style="font-size:0.58rem;color:var(--text2);text-transform:uppercase;margin-bottom:3px;display:block;">Número de acciones</label>
-        <input type="number" id="qty-shares-input" class="risk-input" value="1" min="1" max="10000" onchange="syncQtyInput()">
+        <label style="font-size:0.58rem;color:var(--text2);text-transform:uppercase;margin-bottom:3px;display:block;">Nº de acciones (admite decimales)</label>
+        <input type="number" id="qty-shares-input" class="risk-input" value="1" min="0.01" max="100000" step="0.01" placeholder="ej. 1.3" onchange="syncQtyInput()">
       </div>
     </div>
 
@@ -225,6 +226,27 @@
       <div id="exec-info" style="font-size:0.66rem;color:var(--text2);margin-top:5px;line-height:1.5;"></div>
     </div>
 
+    <!-- T212 CONNECT (mobile: also accessible via bottom nav) -->
+    <div class="section t212-section-mobile" style="display:none;">
+      <div class="section-title">Trading 212</div>
+      <a href="trading212.html" style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text);transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <span style="font-size:1.5rem;">📡</span>
+        <div>
+          <div style="font-weight:700;font-size:0.85rem;">Conectar Trading 212</div>
+          <div style="font-size:0.66rem;color:var(--text2);margin-top:2px;">API key · cuenta real · órdenes</div>
+        </div>
+        <span style="margin-left:auto;color:var(--accent);font-size:0.8rem;">→</span>
+      </a>
+      <a href="t212-account.html" style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text);transition:border-color 0.2s;margin-top:8px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <span style="font-size:1.5rem;">💰</span>
+        <div>
+          <div style="font-weight:700;font-size:0.85rem;">Ver Cuenta T212</div>
+          <div style="font-size:0.66rem;color:var(--text2);margin-top:2px;">Posiciones · saldo · historial</div>
+        </div>
+        <span style="margin-left:auto;color:var(--accent);font-size:0.8rem;">→</span>
+      </a>
+    </div>
+
   </div>
 
   <!-- RIGHT PANEL -->
@@ -232,6 +254,11 @@
 
     <!-- STATS -->
     <div class="stats-grid" id="stats-grid">
+      <div class="stat-cell">
+        <div class="stat-cell-label">Valor Total Cuenta</div>
+        <div class="stat-cell-value" id="stat-account-value">$10,000.00</div>
+        <div class="stat-cell-sub" id="stat-account-value-pct">0.00%</div>
+      </div>
       <div class="stat-cell">
         <div class="stat-cell-label">Capital disponible</div>
         <div class="stat-cell-value" id="stat-capital">$10,000.00</div>
@@ -252,10 +279,11 @@
       </div>
     </div>
 
-    <!-- CHART TABS hidden, only TradingView -->
-    <div style="display:none;">
+    <!-- CHART TABS -->
+    <div style="display:flex;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);">
       <button class="chart-tab active" onclick="switchChartView('tradingview')" id="tab-tradingview">TradingView</button>
-      <button class="chart-tab" onclick="switchChartView('realtime')" id="tab-realtime">Live</button>
+      <button class="chart-tab" onclick="switchChartView('realtime')" id="tab-realtime">⚡ En Vivo</button>
+      <span class="chart-tab-hint">TradingView (acciones) ~15min retraso · "En Vivo" = precio real sin retraso</span>
     </div>
 
     <!-- TRADINGVIEW CHART -->
@@ -293,18 +321,11 @@
 
     <!-- REALTIME CHART -->
     <div id="chart-realtime-view" style="flex:1;display:none;flex-direction:column;background:var(--bg);">
-      <div style="padding:10px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:0.7rem;color:var(--text2);">Actualización en vivo cada 1 segundo</div>
-        <select class="risk-input" id="realtime-tf" onchange="updateRealtimeChart()" style="width:100px;padding:4px;font-size:0.7rem;">
-          <option value="1m">1 minuto</option>
-          <option value="5m">5 minutos</option>
-          <option value="15m">15 minutos</option>
-          <option value="1h">1 hora</option>
-          <option value="1d">1 día</option>
-          <option value="1w" selected>1 semana</option>
-        </select>
+      <div style="padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:0.7rem;color:var(--accent);font-weight:600;">⚡ Precio real en vivo — sin retraso (Yahoo / Binance)</div>
+        <div style="font-size:0.62rem;color:var(--text2);">Se actualiza cada 3-5s</div>
       </div>
-      <canvas id="realtime-canvas" style="flex:1;"></canvas>
+      <div style="flex:1;position:relative;min-height:0;"><canvas id="realtime-canvas" style="position:absolute;inset:0;"></canvas></div>
     </div>
 
     <!-- POSITIONS -->
@@ -337,6 +358,20 @@
       </div>
     </div>
 
+    <!-- HISTORIAL DE MOVIMIENTOS -->
+    <div class="movements-panel">
+      <div class="movements-header">
+        <div class="positions-title">Historial de movimientos</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="movements-count" style="font-family:var(--mono);font-size:0.66rem;color:var(--text2);">0 mov.</span>
+          <button class="clear-all-btn" onclick="clearMovements()" title="Vaciar todo el historial">Vaciar todo</button>
+        </div>
+      </div>
+      <div class="movements-body" id="movements-body">
+        <div style="text-align:center;color:var(--text3);padding:14px;font-size:0.7rem;">Sin movimientos todavía</div>
+      </div>
+    </div>
+
     <!-- LOG -->
     <div class="log-panel">
       <div class="log-header">Log de operaciones</div>
@@ -360,6 +395,10 @@
     <span class="mobile-nav-icon">💼</span>
     Posiciones
   </button>
+  <button class="mobile-nav-btn" id="mnav-t212" onclick="mobileTab('t212')">
+    <span class="mobile-nav-icon">📡</span>
+    T212
+  </button>
 </nav>
 
 <!-- TradingView Widget Script -->
@@ -372,34 +411,45 @@
 
 <script>
 (function() {
-  var panelLeft     = document.querySelector('.panel-left');
-  var panelRight    = document.querySelector('.panel-right');
-  var btnControl    = document.getElementById('mnav-control');
-  var btnChart      = document.getElementById('mnav-chart');
-  var btnPositions  = document.getElementById('mnav-positions');
+  var panelLeft    = document.querySelector('.panel-left');
+  var panelRight   = document.querySelector('.panel-right');
+  var t212Section  = document.querySelector('.t212-section-mobile');
+  var btnControl   = document.getElementById('mnav-control');
+  var btnChart     = document.getElementById('mnav-chart');
+  var btnPositions = document.getElementById('mnav-positions');
+  var btnT212      = document.getElementById('mnav-t212');
 
   function isMobile() { return window.innerWidth <= 768; }
 
-  window.mobileTab = function(tab) {
-    if (!isMobile()) return;
-    [btnControl, btnChart, btnPositions].forEach(function(b) { b.classList.remove('active'); });
+  function clearAllTabs() {
+    [btnControl, btnChart, btnPositions, btnT212].forEach(function(b) { b.classList.remove('active'); });
     panelLeft.classList.remove('mobile-active');
     panelRight.classList.remove('mobile-active');
+  }
+
+  window.mobileTab = function(tab) {
+    if (!isMobile()) return;
+    clearAllTabs();
 
     if (tab === 'control') {
       panelLeft.classList.add('mobile-active');
+      if (t212Section) t212Section.style.display = 'none';
       btnControl.classList.add('active');
     } else if (tab === 'chart') {
       panelRight.classList.add('mobile-active');
       btnChart.classList.add('active');
-      // scroll chart into view
       var chartArea = document.getElementById('chart-area');
-      if (chartArea) chartArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (chartArea) setTimeout(function() { chartArea.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
     } else if (tab === 'positions') {
       panelRight.classList.add('mobile-active');
       btnPositions.classList.add('active');
       var posPanel = document.querySelector('.positions-panel');
       if (posPanel) setTimeout(function() { posPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+    } else if (tab === 't212') {
+      panelLeft.classList.add('mobile-active');
+      if (t212Section) t212Section.style.display = 'block';
+      btnT212.classList.add('active');
+      if (t212Section) setTimeout(function() { t212Section.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
     }
   };
 
@@ -408,11 +458,11 @@
     panelLeft.classList.add('mobile-active');
   }
 
-  // Re-init on resize
   window.addEventListener('resize', function() {
     if (!isMobile()) {
       panelLeft.classList.remove('mobile-active');
       panelRight.classList.remove('mobile-active');
+      if (t212Section) t212Section.style.display = 'none';
     } else if (!panelLeft.classList.contains('mobile-active') && !panelRight.classList.contains('mobile-active')) {
       panelLeft.classList.add('mobile-active');
     }

@@ -308,21 +308,32 @@ async function fetchLivePrice(ticker) {
 
 function startPriceUpdateLoop(ticker) {
   if (state._priceUpdateInterval) clearInterval(state._priceUpdateInterval);
-  const interval = isCrypto(ticker) ? 10000 : 15000; // crypto 10s, stocks 15s
-  state._priceUpdateInterval = setInterval(async () => {
+  // Actualización rápida: crypto cada 3s, acciones cada 5s
+  const interval = isCrypto(ticker) ? 3000 : 5000;
+  // Resetear ticks en vivo al cambiar de activo
+  if (state._liveTicker !== ticker) { state._liveTicks = []; state._liveTicker = ticker; }
+
+  const poll = async () => {
     try {
       const live = await fetchLivePrice(ticker);
       if (live?.price) {
         updateChartPriceBar(ticker, live.price, live.dailyChangePct);
-        // Update open positions with live price
+        // Guardar tick para el gráfico En Vivo (sin retraso)
+        if (!state._liveTicks) state._liveTicks = [];
+        state._liveTicks.push({ t: Date.now(), price: live.price });
+        if (state._liveTicks.length > 600) state._liveTicks.shift();
+        if (typeof drawLiveChart === 'function') drawLiveChart();
+        // Actualizar posiciones del ticker activo con precio real
         if (state.positions.some(p => p.ticker === ticker)) {
-          state.positions.forEach(p => { if (p.ticker === ticker) p.current = live.price; });
+          state.positions.forEach(p => { if (p.ticker === ticker) p.current = parseFloat(live.price.toFixed(4)); });
           renderPositions();
           updatePortfolio();
         }
       }
     } catch(e) {}
-  }, interval);
+  };
+  poll(); // primer tick inmediato
+  state._priceUpdateInterval = setInterval(poll, interval);
 }
 
 // ══════════════════════════════════════════
@@ -622,15 +633,10 @@ function generateChartSignal(ticker, price, indicators, capital, riskPct, rrMin)
   const perShareRisk = Math.abs(entry - stopLoss) || entry * 0.03;
   const riskAmount   = capital * (riskPct / 100);
   // Allow fractional (2 decimal places for crypto, whole for stocks)
-  const isCryptoTicker = typeof isCrypto === 'function' ? isCrypto(ticker) : ticker.includes('-');
-  let qty;
-  if (isCryptoTicker) {
-    qty = Math.round((riskAmount / perShareRisk) * 100) / 100; // 2 decimals
-    qty = Math.max(0.01, Math.min(qty, Math.floor((capital / entry) * 100) / 100));
-  } else {
-    qty = Math.floor(riskAmount / perShareRisk);
-    qty = Math.max(1, Math.min(qty, Math.floor(capital / entry)));
-  }
+  // Tamaño fraccionario (2 decimales) tanto para cripto como acciones → ej. 1.3
+  let qty = Math.round((riskAmount / perShareRisk) * 100) / 100;
+  const maxAffordable = Math.floor((capital / entry) * 100) / 100;
+  qty = Math.max(0.01, Math.min(qty, maxAffordable));
 
   const positionValue   = qty * entry;
   const actualRisk      = perShareRisk * qty;

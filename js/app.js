@@ -26,57 +26,86 @@ function log(msg, type='info') {
 
 // ── Chart views ───────────────────────────
 function switchChartView(view) {
+  state.chart_view = view;
   document.getElementById('chart-tradingview-view').style.display = view === 'tradingview' ? 'flex' : 'none';
   document.getElementById('chart-realtime-view').style.display    = view === 'realtime'    ? 'flex' : 'none';
-  document.getElementById('tab-tradingview').classList.toggle('active', view === 'tradingview');
-  document.getElementById('tab-realtime').classList.toggle('active', view === 'realtime');
-  if (view === 'realtime' && state.current_ticker) setTimeout(() => drawRealtimeChart(), 100);
+  document.getElementById('tab-tradingview')?.classList.toggle('active', view === 'tradingview');
+  document.getElementById('tab-realtime')?.classList.toggle('active', view === 'realtime');
+  if (view === 'realtime') setTimeout(() => drawLiveChart(), 60);
 }
 
 function updateRealtimeChart() {
-  if (document.getElementById('chart-realtime-view').style.display !== 'none') drawRealtimeChart();
+  if (document.getElementById('chart-realtime-view').style.display !== 'none') drawLiveChart();
 }
 
-function drawRealtimeChart() {
+// Gráfico EN VIVO — línea construida con ticks reales (sin retraso de 15 min)
+function drawLiveChart() {
   const canvas = document.getElementById('realtime-canvas');
-  if (!canvas || state._priceHistory.length === 0) return;
+  if (!canvas) return;
+  if (document.getElementById('chart-realtime-view').style.display === 'none') return;
+
   const ctx = canvas.getContext('2d');
   canvas.width  = canvas.offsetWidth;
   canvas.height = canvas.offsetHeight;
-  const data = state._priceHistory;
-  const min  = Math.min(...data.map(d => d.low));
-  const max  = Math.max(...data.map(d => d.high));
-  const range = max - min || 1;
-  const w = canvas.width, h = canvas.height, padding = 40;
-  const chartW = w - 2*padding, chartH = h - 2*padding;
-  const barW = Math.max(1, chartW / data.length);
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  const w = canvas.width, h = canvas.height, padding = 46;
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  ctx.fillStyle = css('--bg');
   ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
-  ctx.lineWidth = 0.5;
+
+  const ticks = state._liveTicks || [];
+  if (ticks.length < 2) {
+    ctx.fillStyle = css('--text3');
+    ctx.font = '13px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('Esperando datos en vivo…', w / 2, h / 2);
+    return;
+  }
+
+  const prices = ticks.map(t => t.price);
+  const min = Math.min(...prices), max = Math.max(...prices);
+  const range = (max - min) || (min * 0.001) || 1;
+  const chartW = w - 2 * padding, chartH = h - 2 * padding;
+  const xOf = i => padding + (chartW * i) / (ticks.length - 1);
+  const yOf = p => padding + (1 - (p - min) / range) * chartH;
+
+  // Grid + etiquetas de precio
+  ctx.strokeStyle = css('--border'); ctx.lineWidth = 0.5;
+  ctx.fillStyle = css('--text2'); ctx.font = '11px monospace'; ctx.textAlign = 'right';
   for (let i = 0; i <= 5; i++) {
     const y = padding + (chartH / 5) * i;
     ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(w - padding, y); ctx.stroke();
-  }
-  data.forEach((d, i) => {
-    const x      = padding + i * barW;
-    const openY  = padding + (1 - (d.open  - min) / range) * chartH;
-    const closeY = padding + (1 - (d.close - min) / range) * chartH;
-    const highY  = padding + (1 - (d.high  - min) / range) * chartH;
-    const lowY   = padding + (1 - (d.low   - min) / range) * chartH;
-    const color  = d.close >= d.open ? '#00d4a0' : '#ff4d6a';
-    ctx.strokeStyle = color; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(x + barW/2, highY); ctx.lineTo(x + barW/2, lowY); ctx.stroke();
-    ctx.fillStyle = color;
-    ctx.fillRect(x + 2, Math.min(openY, closeY), barW - 4, Math.abs(closeY - openY) || 1);
-  });
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text2').trim();
-  ctx.font = '12px monospace'; ctx.textAlign = 'right';
-  for (let i = 0; i <= 5; i++) {
     const price = min + (range / 5) * (5 - i);
-    ctx.fillText('$' + price.toFixed(2), padding - 10, padding + (chartH/5)*i + 4);
+    ctx.fillText('$' + price.toFixed(price >= 100 ? 2 : 4), padding - 8, y + 4);
   }
+
+  const last = prices[prices.length - 1];
+  const first = prices[0];
+  const up = last >= first;
+  const lineColor = up ? '#00d4a0' : '#ff4d6a';
+
+  // Relleno bajo la línea
+  ctx.beginPath();
+  ctx.moveTo(xOf(0), yOf(prices[0]));
+  ticks.forEach((t, i) => ctx.lineTo(xOf(i), yOf(t.price)));
+  ctx.lineTo(xOf(ticks.length - 1), h - padding);
+  ctx.lineTo(xOf(0), h - padding);
+  ctx.closePath();
+  ctx.fillStyle = up ? 'rgba(0,212,160,0.08)' : 'rgba(255,77,106,0.08)';
+  ctx.fill();
+
+  // Línea de precio
+  ctx.beginPath();
+  ticks.forEach((t, i) => { const x = xOf(i), y = yOf(t.price); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.strokeStyle = lineColor; ctx.lineWidth = 1.6; ctx.stroke();
+
+  // Punto y etiqueta del último precio
+  const lx = xOf(ticks.length - 1), ly = yOf(last);
+  ctx.beginPath(); ctx.arc(lx, ly, 3.5, 0, Math.PI * 2); ctx.fillStyle = lineColor; ctx.fill();
+  ctx.fillStyle = lineColor; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'left';
+  ctx.fillText('$' + last.toFixed(last >= 100 ? 2 : 4), Math.min(lx + 8, w - 70), ly + 4);
 }
+// Alias retrocompatible
+function drawRealtimeChart() { drawLiveChart(); }
 
 // ── Misc ──────────────────────────────────
 function setTicker(t) {
@@ -128,6 +157,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof loadChartSettings === 'function') loadChartSettings();
   updatePortfolio();
   renderPositions();
+  if (typeof renderMovements === 'function') renderMovements();
+  window.addEventListener('resize', () => { if (typeof drawLiveChart === 'function') drawLiveChart(); });
   // Restore last ticker
   if (state.current_ticker) {
     const inp = document.getElementById('ticker-input');
