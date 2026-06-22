@@ -226,8 +226,7 @@
       <code>GET /api/v0/equity/portfolio</code> — posiciones abiertas<br>
       <code>GET /api/v0/equity/orders</code> — historial de órdenes<br>
       <br>
-      <strong>Nota sobre CORS:</strong> Si ves errores de CORS al acceder desde el navegador, abre la página desde un servidor local
-      (<code>python -m http.server 8080</code>) o usa la extensión <em>Allow CORS</em> en tu navegador.
+      <strong>Nota sobre CORS:</strong> La app intenta conectar directamente y, si falla, usa un proxy CORS automáticamente. Si aun así falla, instala la extensión <em>Allow CORS</em> en tu navegador.
       <br><br>
       <strong>Endpoint obsoleto (NO usar):</strong><br>
       <code style="opacity:0.5;text-decoration:line-through;">/api/v0/equity/account/cash</code>
@@ -238,6 +237,36 @@
 
 <script>
 const BASE = 'https://live.trading212.com/api/v0';
+
+const CORS_PROXIES = [
+  url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+];
+
+async function t212Fetch(endpoint, key) {
+  const url = `${BASE}${endpoint}`;
+
+  // Try direct first (works on localhost or if browser doesn't block it)
+  try {
+    const res = await fetch(url, {
+      headers: { 'Authorization': key },
+      signal: AbortSignal.timeout(6000)
+    });
+    if (res.status !== 0) return res;
+  } catch(e) {}
+
+  // Fallback through CORS proxies
+  for (const buildProxy of CORS_PROXIES) {
+    try {
+      const res = await fetch(buildProxy(url), {
+        headers: { 'Authorization': key },
+        signal: AbortSignal.timeout(10000)
+      });
+      if (res.ok || res.status === 401 || res.status === 429) return res;
+    } catch(e) {}
+  }
+  throw new Error('CORS: no se pudo conectar con Trading 212. Prueba la extensión Allow CORS en tu navegador.');
+}
 
 // ── Persist key ──────────────────────────────────────────────
 (function init() {
@@ -276,9 +305,7 @@ async function connectT212() {
   document.getElementById('portfolio-card').style.display = 'none';
 
   try {
-    const res = await fetch(`${BASE}/equity/account/info`, {
-      headers: { 'Authorization': key }
-    });
+    const res = await t212Fetch('/equity/account/info', key);
 
     if (res.status === 401) {
       setStatus('err', 'API key inválida o sin permisos. Revisa la key en Trading 212 → Configuración → API.');
@@ -307,11 +334,7 @@ async function connectT212() {
     setStatus('ok', `Conectado — Cuenta ${data.id ?? ''} (${data.type ?? 'LIVE'})`);
 
   } catch (err) {
-    if (err.name === 'TypeError' && err.message.includes('fetch')) {
-      setStatus('err', 'Error de red / CORS. Abre desde un servidor local o activa una extensión de CORS en el navegador.');
-    } else {
-      setStatus('err', 'Error inesperado: ' + err.message);
-    }
+    setStatus('err', err.message || 'Error inesperado al conectar.');
   } finally {
     btn.disabled = false;
   }
@@ -338,9 +361,7 @@ async function loadPortfolio() {
   setStatus('loading', 'Cargando posiciones abiertas...', true);
 
   try {
-    const res = await fetch(`${BASE}/equity/portfolio`, {
-      headers: { 'Authorization': key }
-    });
+    const res = await t212Fetch('/equity/portfolio', key);
 
     if (!res.ok) {
       setStatus('err', `Error al cargar portfolio: ${res.status}`);
