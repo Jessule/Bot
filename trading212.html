@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading 212 — Conexión API</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  /* ── Page layout ── */
+  body { display:flex; flex-direction:column; min-height:100vh; background:var(--bg); }
+
+  .t212-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 18px; height:48px; background:var(--surface);
+    border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100;
+  }
+  .t212-logo { display:flex; align-items:center; gap:10px; font-weight:700; font-size:1rem; }
+  .t212-logo .dot { width:8px; height:8px; background:var(--accent); border-radius:50%; box-shadow:0 0 8px var(--accent); }
+  .back-link {
+    font-size:0.72rem; color:var(--text2); text-decoration:none;
+    background:var(--surface2); border:1px solid var(--border);
+    padding:5px 12px; border-radius:6px; transition:border-color 0.2s, color 0.2s;
+  }
+  .back-link:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ── Center wrapper ── */
+  .page-wrap {
+    flex:1; display:flex; flex-direction:column; align-items:center;
+    padding:36px 16px 60px;
+  }
+
+  /* ── Card ── */
+  .card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:14px; padding:28px 30px; width:100%; max-width:520px;
+  }
+  .card + .card { margin-top:20px; }
+
+  .card-title {
+    font-size:0.72rem; font-weight:700; text-transform:uppercase;
+    letter-spacing:1.5px; color:var(--text2); margin-bottom:18px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .card-title .badge {
+    background:var(--accent-dim); color:var(--accent);
+    border:1px solid rgba(0,212,160,0.3); border-radius:5px;
+    padding:1px 7px; font-size:0.6rem; letter-spacing:0.5px;
+  }
+
+  /* ── Form ── */
+  .field { margin-bottom:16px; }
+  .field label {
+    display:block; font-size:0.62rem; color:var(--text2);
+    text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; font-weight:600;
+  }
+  .field .hint {
+    font-size:0.6rem; color:var(--text3); margin-top:4px; line-height:1.5;
+  }
+  .field input {
+    width:100%; background:var(--surface2); border:1px solid var(--border);
+    border-radius:8px; color:var(--text); font-family:var(--mono);
+    font-size:0.78rem; padding:10px 13px; outline:none;
+    transition:border-color 0.2s;
+  }
+  .field input:focus { border-color:var(--accent); }
+  .field input::placeholder { color:var(--text3); }
+
+  /* ── Buttons ── */
+  .btn-connect {
+    width:100%; padding:12px; background:var(--accent); color:#000;
+    border:none; border-radius:9px; font-family:var(--font);
+    font-size:0.85rem; font-weight:700; cursor:pointer; letter-spacing:0.5px;
+    transition:opacity 0.2s;
+  }
+  .btn-connect:hover { opacity:0.88; }
+  .btn-connect:disabled { opacity:0.45; cursor:not-allowed; }
+
+  /* ── Status banner ── */
+  .status-bar {
+    display:none; align-items:center; gap:10px;
+    padding:10px 14px; border-radius:8px; margin-top:14px;
+    font-size:0.75rem; font-weight:600;
+  }
+  .status-bar.ok  { background:var(--accent-dim); border:1px solid rgba(0,212,160,0.25); color:var(--accent); display:flex; }
+  .status-bar.err { background:var(--red-dim);    border:1px solid rgba(255,77,106,0.25); color:var(--red);   display:flex; }
+  .status-bar.loading { background:var(--surface2); border:1px solid var(--border); color:var(--text2); display:flex; }
+
+  /* ── Account info grid ── */
+  #account-card { display:none; }
+  .info-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px;
+  }
+  .info-cell {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:9px; padding:12px 14px;
+  }
+  .info-cell .lbl { font-size:0.58rem; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:4px; }
+  .info-cell .val { font-family:var(--mono); font-size:1rem; font-weight:700; color:var(--text); }
+  .info-cell .val.green { color:var(--accent); }
+  .info-cell .val.yellow { color:var(--yellow); }
+
+  /* ── Portfolio table ── */
+  #portfolio-card { display:none; }
+  .port-table { width:100%; border-collapse:collapse; font-size:0.72rem; }
+  .port-table th {
+    text-align:left; padding:6px 8px; font-size:0.58rem;
+    text-transform:uppercase; letter-spacing:1px; color:var(--text3);
+    border-bottom:1px solid var(--border);
+  }
+  .port-table td { padding:8px 8px; border-bottom:1px solid rgba(30,42,58,0.5); color:var(--text2); }
+  .port-table td.ticker { color:var(--text); font-weight:700; font-family:var(--mono); }
+  .port-table td.pos { color:var(--accent); }
+  .port-table td.neg { color:var(--red); }
+  .empty-port { text-align:center; color:var(--text3); padding:20px; font-size:0.72rem; }
+
+  /* ── Info note ── */
+  .note {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:8px; padding:12px 14px; margin-top:14px;
+    font-size:0.67rem; color:var(--text3); line-height:1.7;
+  }
+  .note strong { color:var(--text2); }
+  .note code {
+    background:rgba(0,212,160,0.1); color:var(--accent);
+    border-radius:4px; padding:1px 5px; font-family:var(--mono); font-size:0.65rem;
+  }
+
+  /* ── Section divider ── */
+  .section-sep {
+    height:1px; background:var(--border); margin:18px 0;
+  }
+
+  /* ── Spinner ── */
+  .spin {
+    display:inline-block; width:14px; height:14px;
+    border:2px solid rgba(255,255,255,0.2);
+    border-top-color:var(--text2); border-radius:50%;
+    animation:spin 0.7s linear infinite; flex-shrink:0;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="t212-header">
+  <div class="t212-logo">
+    <div class="dot"></div>
+    Trading 212 — Conexión API
+  </div>
+  <a href="index.html" class="back-link">← Volver al bot</a>
+</div>
+
+<!-- PAGE -->
+<div class="page-wrap">
+
+  <!-- ── CREDENCIALES ── -->
+  <div class="card">
+    <div class="card-title">
+      Credenciales API
+      <span class="badge">LIVE</span>
+    </div>
+
+    <!-- API Key -->
+    <div class="field">
+      <label>Llave API (API Key)</label>
+      <input type="password" id="api-key" placeholder="Pega aquí tu API key de Trading 212" autocomplete="off">
+      <div class="hint">
+        Obtenla en <strong>Trading 212 → Configuración → API (experimental)</strong>.<br>
+        Esta es la única credencial que necesita la API pública de T212.
+      </div>
+    </div>
+
+    <!-- Account ID (opcional) -->
+    <div class="field">
+      <label>ID de cuenta <span style="color:var(--text3);font-size:0.6rem;text-transform:none;">(opcional — se detecta automáticamente)</span></label>
+      <input type="text" id="account-id-input" placeholder="p.ej. 1234567" autocomplete="off">
+      <div class="hint">Si conoces tu ID numérico de cuenta puedes introducirlo. Si no, se obtiene al conectar.</div>
+    </div>
+
+    <!-- Secret (nota explicativa) -->
+    <div class="field">
+      <label>Secreto / Secret</label>
+      <input type="password" id="secret-input" placeholder="No requerido por Trading 212 (deja vacío)" autocomplete="off" style="opacity:0.5;">
+      <div class="hint">
+        La API pública de Trading 212 <strong>no usa un campo secreto separado</strong>.<br>
+        Solo necesitas la <strong>API Key</strong> del campo de arriba.
+      </div>
+    </div>
+
+    <button class="btn-connect" id="connect-btn" onclick="connectT212()">Conectar con Trading 212</button>
+
+    <!-- Status banner -->
+    <div class="status-bar" id="status-bar">
+      <div class="spin" id="status-spin" style="display:none;"></div>
+      <span id="status-msg"></span>
+    </div>
+  </div>
+
+  <!-- ── CUENTA ── -->
+  <div class="card" id="account-card">
+    <div class="card-title">Mi cuenta Trading 212</div>
+    <div class="info-grid" id="info-grid">
+      <!-- populated by JS -->
+    </div>
+    <button
+      onclick="loadPortfolio()"
+      style="width:100%;padding:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;cursor:pointer;font-size:0.75rem;font-family:var(--font);transition:border-color 0.2s;"
+      onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
+      Cargar posiciones abiertas
+    </button>
+  </div>
+
+  <!-- ── PORTFOLIO ── -->
+  <div class="card" id="portfolio-card">
+    <div class="card-title">Posiciones abiertas</div>
+    <div id="portfolio-wrap"></div>
+  </div>
+
+  <!-- ── NOTA INFORMATIVA ── -->
+  <div style="max-width:520px;width:100%;">
+    <div class="note">
+      <strong>Endpoints activos de la API (v0):</strong><br>
+      <code>GET /api/v0/equity/account/info</code> — info de cuenta (ID, divisa, tipo)<br>
+      <code>GET /api/v0/equity/portfolio</code> — posiciones abiertas<br>
+      <code>GET /api/v0/equity/orders</code> — historial de órdenes<br>
+      <br>
+      <strong>Nota sobre CORS:</strong> Si ves errores de CORS al acceder desde el navegador, abre la página desde un servidor local
+      (<code>python -m http.server 8080</code>) o usa la extensión <em>Allow CORS</em> en tu navegador.
+      <br><br>
+      <strong>Endpoint obsoleto (NO usar):</strong><br>
+      <code style="opacity:0.5;text-decoration:line-through;">/api/v0/equity/account/cash</code>
+    </div>
+  </div>
+
+</div><!-- /page-wrap -->
+
+<script>
+const BASE = 'https://live.trading212.com/api/v0';
+
+// ── Persist key ──────────────────────────────────────────────
+(function init() {
+  const saved = localStorage.getItem('t212_api_key');
+  if (saved) document.getElementById('api-key').value = saved;
+  const savedId = localStorage.getItem('t212_account_id');
+  if (savedId) document.getElementById('account-id-input').value = savedId;
+})();
+
+// ── UI helpers ───────────────────────────────────────────────
+function setStatus(type, msg, spinner = false) {
+  const bar  = document.getElementById('status-bar');
+  const spin = document.getElementById('status-spin');
+  const txt  = document.getElementById('status-msg');
+  bar.className = 'status-bar ' + type;
+  spin.style.display = spinner ? 'inline-block' : 'none';
+  txt.textContent = msg;
+}
+
+function cell(label, value, cls = '') {
+  return `<div class="info-cell">
+    <div class="lbl">${label}</div>
+    <div class="val ${cls}">${value}</div>
+  </div>`;
+}
+
+// ── Connect ──────────────────────────────────────────────────
+async function connectT212() {
+  const key = document.getElementById('api-key').value.trim();
+  if (!key) { setStatus('err', 'Introduce tu API key para continuar.'); return; }
+
+  const btn = document.getElementById('connect-btn');
+  btn.disabled = true;
+  setStatus('loading', 'Conectando con Trading 212...', true);
+  document.getElementById('account-card').style.display = 'none';
+  document.getElementById('portfolio-card').style.display = 'none';
+
+  try {
+    const res = await fetch(`${BASE}/equity/account/info`, {
+      headers: { 'Authorization': key }
+    });
+
+    if (res.status === 401) {
+      setStatus('err', 'API key inválida o sin permisos. Revisa la key en Trading 212 → Configuración → API.');
+      btn.disabled = false;
+      return;
+    }
+    if (res.status === 429) {
+      setStatus('err', 'Demasiadas peticiones. Espera unos segundos y vuelve a intentarlo.');
+      btn.disabled = false;
+      return;
+    }
+    if (!res.ok) {
+      setStatus('err', `Error del servidor: ${res.status} ${res.statusText}`);
+      btn.disabled = false;
+      return;
+    }
+
+    const data = await res.json();
+
+    // Persist
+    localStorage.setItem('t212_api_key', key);
+    localStorage.setItem('t212_account_id', data.id ?? '');
+
+    // Show account info
+    showAccountInfo(data);
+    setStatus('ok', `Conectado — Cuenta ${data.id ?? ''} (${data.type ?? 'LIVE'})`);
+
+  } catch (err) {
+    if (err.name === 'TypeError' && err.message.includes('fetch')) {
+      setStatus('err', 'Error de red / CORS. Abre desde un servidor local o activa una extensión de CORS en el navegador.');
+    } else {
+      setStatus('err', 'Error inesperado: ' + err.message);
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function showAccountInfo(data) {
+  const grid = document.getElementById('info-grid');
+  const typeColor = data.type === 'LIVE' ? 'green' : 'yellow';
+
+  grid.innerHTML =
+    cell('ID de cuenta',     data.id          ?? '—')  +
+    cell('Tipo de cuenta',   data.type        ?? '—',  typeColor) +
+    cell('Divisa',           data.currencyCode ?? '—') +
+    cell('Cuenta demo',      data.type === 'DEMO' ? 'Sí' : 'No');
+
+  document.getElementById('account-card').style.display = 'block';
+}
+
+// ── Portfolio ────────────────────────────────────────────────
+async function loadPortfolio() {
+  const key = localStorage.getItem('t212_api_key') || document.getElementById('api-key').value.trim();
+  if (!key) { setStatus('err', 'Conecta primero con tu API key.'); return; }
+
+  setStatus('loading', 'Cargando posiciones abiertas...', true);
+
+  try {
+    const res = await fetch(`${BASE}/equity/portfolio`, {
+      headers: { 'Authorization': key }
+    });
+
+    if (!res.ok) {
+      setStatus('err', `Error al cargar portfolio: ${res.status}`);
+      return;
+    }
+
+    const positions = await res.json();
+    renderPortfolio(Array.isArray(positions) ? positions : (positions.open ?? []));
+    setStatus('ok', `Portfolio cargado — ${Array.isArray(positions) ? positions.length : '?'} posición/es`);
+
+  } catch (err) {
+    setStatus('err', 'Error al cargar portfolio: ' + err.message);
+  }
+}
+
+function renderPortfolio(positions) {
+  const wrap = document.getElementById('portfolio-wrap');
+  document.getElementById('portfolio-card').style.display = 'block';
+
+  if (!positions || positions.length === 0) {
+    wrap.innerHTML = '<div class="empty-port">No hay posiciones abiertas actualmente.</div>';
+    return;
+  }
+
+  const rows = positions.map(p => {
+    const pnl    = p.ppl ?? p.unrealised ?? 0;
+    const pnlCls = pnl >= 0 ? 'pos' : 'neg';
+    const pnlStr = (pnl >= 0 ? '+' : '') + pnl.toFixed(2);
+    const qty    = p.quantity ?? p.qty ?? '—';
+    const avg    = p.averagePrice ?? p.avgPrice ?? '—';
+    const cur    = p.currentPrice ?? '—';
+
+    return `<tr>
+      <td class="ticker">${p.ticker ?? p.symbol ?? '—'}</td>
+      <td>${typeof avg === 'number' ? '$' + avg.toFixed(4) : avg}</td>
+      <td>${typeof cur === 'number' ? '$' + cur.toFixed(4) : cur}</td>
+      <td>${qty}</td>
+      <td class="${pnlCls}">${pnlStr}</td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <table class="port-table">
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>Precio medio</th>
+          <th>Precio actual</th>
+          <th>Cantidad</th>
+          <th>PyG</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+</script>
+
+</body>
+</html>

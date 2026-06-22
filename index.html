@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeBot AI v4</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-dot" id="live-dot"></div>
+    TradeBot AI
+    <span style="font-size:0.58rem;color:var(--text2);font-weight:400;margin-left:4px;">Paper Trading</span>
+  </div>
+
+  <!-- BOT CONTROLS -->
+  <div class="bot-toggle-wrap">
+    <span class="bot-label">Auto-Bot</span>
+    <label class="toggle-switch">
+      <input type="checkbox" id="bot-toggle" onchange="toggleBot()">
+      <span class="toggle-slider"></span>
+    </label>
+    <span class="bot-status off" id="bot-status">OFF</span>
+    <select id="bot-mode-select" onchange="setBotMode(this.value)" title="Modo del bot" style="background:var(--bg);border:1px solid var(--border);color:var(--text2);border-radius:5px;padding:2px 5px;font-size:0.62rem;font-family:var(--mono);cursor:pointer;outline:none;margin-left:2px;">
+      <option value="combined">Combinado</option>
+      <option value="macd">Solo MACD</option>
+    </select>
+    <button id="bot-info-btn" onclick="toggleBotInfoPanel()" title="Ver análisis del bot" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:2px 7px;cursor:pointer;font-size:0.65rem;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">📋</button>
+  </div>
+
+  <!-- BOT INFO PANEL -->
+  <div id="bot-info-panel" style="display:none;position:fixed;top:54px;left:50%;transform:translateX(-50%);z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;min-width:320px;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div style="font-weight:700;font-size:0.85rem;color:var(--accent);">🤖 Análisis del Bot</div>
+      <button onclick="toggleBotInfoPanel()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:1rem;">✕</button>
+    </div>
+    <div id="bot-info-content" style="font-size:0.75rem;color:var(--text2);line-height:1.7;">
+      <div style="color:var(--text3);text-align:center;padding:10px;">Analiza un ticker para ver el análisis aquí.</div>
+    </div>
+  </div>
+
+  <!-- PRICE & SIGNAL INFO -->
+  <div class="header-signal-info">
+    <div class="signal-ticker-display" id="signal-ticker-display" style="display:none;">
+      <div class="signal-price-item">
+        <div class="signal-price-label">Precio</div>
+        <div class="signal-price-value" id="hdr-price" style="font-family:var(--mono);font-weight:700;font-size:1.1rem;">—</div>
+      </div>
+      <div class="signal-trend-item">
+        <div class="signal-trend-label">Tendencia</div>
+        <div class="signal-trend-value" id="hdr-trend" style="font-weight:700;font-size:1rem;color:var(--accent);">—</div>
+      </div>
+      <div class="signal-conf-item">
+        <div class="signal-conf-label">Confianza</div>
+        <div class="signal-conf-value" id="hdr-confidence" style="font-family:var(--mono);font-weight:700;font-size:1rem;">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="header-portfolio">
+    <div class="portfolio-item">
+      <div class="portfolio-label">Capital</div>
+      <div class="portfolio-value" id="hdr-capital">$10,000.00</div>
+    </div>
+    <div class="hdr-divider"></div>
+    <div class="portfolio-item">
+      <div class="portfolio-label">PyG Hoy</div>
+      <div class="portfolio-value" id="hdr-pnl-day">$0.00</div>
+      <div class="portfolio-sub" id="hdr-pnl-day-pct">0.00%</div>
+    </div>
+    <div class="hdr-divider"></div>
+    <div class="portfolio-item">
+      <div class="portfolio-label">PyG Total</div>
+      <div class="portfolio-value" id="hdr-pnl">$0.00</div>
+      <div class="portfolio-sub" id="hdr-pnl-pct">0.00%</div>
+    </div>
+    <div class="hdr-divider"></div>
+    <div class="portfolio-item">
+      <div class="portfolio-label">Operaciones</div>
+      <div class="portfolio-value" id="hdr-trades">0</div>
+    </div>
+    <div class="portfolio-item">
+      <div class="portfolio-label">Win Rate</div>
+      <div class="portfolio-value" id="hdr-winrate">—</div>
+    </div>
+    <div class="hdr-divider"></div>
+    <div class="save-indicator" id="save-indicator">
+      <div class="save-dot" id="save-dot"></div>
+      <span id="save-text">Sin guardar</span>
+    </div>
+    <button onclick="saveState()" class="btn" style="padding:4px 10px;font-size:0.65rem;background:var(--surface2);border:1px solid var(--border);color:var(--text2);">💾 Guardar</button>
+    <button onclick="resetState()" class="btn" style="padding:4px 10px;font-size:0.65rem;background:var(--red-dim);border:1px solid rgba(255,77,106,0.2);color:var(--red);">↺ Reset</button>
+    <a href="game.html" class="btn hdr-extra" style="padding:4px 10px;font-size:0.65rem;background:var(--accent-dim);border:1px solid rgba(0,212,160,0.25);color:var(--accent);text-decoration:none;">🎮 Circle Essence</a>
+    <a href="trading212.html" class="btn hdr-extra" style="padding:4px 10px;font-size:0.65rem;background:var(--surface2);border:1px solid var(--border);color:var(--text2);text-decoration:none;">📡 T212 API</a>
+  </div>
+</div>
+
+<!-- AUTO-BOT STATUS BAR -->
+<div class="auto-trade-bar" id="auto-bar">
+  <span style="color:var(--accent);font-weight:700;">🤖 BOT ACTIVO</span>
+  <span id="auto-bar-msg">Analizando mercado...</span>
+  <div class="auto-progress"><div class="auto-progress-fill" id="auto-fill" style="width:0%"></div></div>
+  <span id="auto-countdown" style="font-family:var(--mono);color:var(--accent);">—</span>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT PANEL -->
+  <div class="panel-left">
+
+    <!-- TICKER -->
+    <div class="section">
+      <div class="section-title">Activo a analizar</div>
+      <div class="ticker-row">
+        <input type="text" class="ticker-input" id="ticker-input" placeholder="AAPL, TSLA, ZEC-USD..." maxlength="12">
+        <button class="btn btn-primary" id="analyze-btn" onclick="analyzeWithAI()">Analizar</button>
+      </div>
+      <div class="preset-tickers">
+        <span class="preset-btn" onclick="setTicker('AAPL')">AAPL</span>
+        <span class="preset-btn" onclick="setTicker('TSLA')">TSLA</span>
+        <span class="preset-btn" onclick="setTicker('NVDA')">NVDA</span>
+        <span class="preset-btn" onclick="setTicker('BTC-USD')">BTC</span>
+        <span class="preset-btn" onclick="setTicker('ETH-USD')">ETH</span>
+        <span class="preset-btn" onclick="setTicker('SOL-USD')">SOL</span>
+        <span class="preset-btn" onclick="setTicker('ZECUSDT')">ZEC</span>
+        <span class="preset-btn" onclick="setTicker('SPY')">SPY</span>
+        <span class="preset-btn" onclick="setTicker('AMZN')">AMZN</span>
+        <span class="preset-btn" onclick="setTicker('MSFT')">MSFT</span>
+      </div>
+    </div>
+
+    <!-- RISK CONFIG -->
+    <div class="section">
+      <div class="section-title">Gestión de riesgo</div>
+      <div class="risk-grid">
+        <div class="risk-item">
+          <label>Capital inicial ($)</label>
+          <input type="number" class="risk-input" id="capital-input" value="10000" min="100">
+        </div>
+        <div class="risk-item">
+          <label>Riesgo por op. (%)</label>
+          <input type="number" class="risk-input" id="risk-pct" value="2" min="0.1" max="100" step="0.1">
+        </div>
+        <div class="risk-item">
+          <label>Ratio R:R mín</label>
+          <input type="number" class="risk-input" id="rr-min" value="2" min="0.5" step="0.1">
+        </div>
+        <div class="risk-item">
+          <label>Timeframe análisis</label>
+          <select class="risk-input" id="timeframe-select" onchange="syncTimeframeToChart()">
+            <option value="intraday">Intraday</option>
+            <option value="swing" selected>Swing (días)</option>
+            <option value="positional">Posicional</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:7px;">
+        <div style="font-size:0.58rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Apalancamiento</div>
+        <div class="leverage-row">
+          <div class="lev-btn active" onclick="setLeverage(1,this)">x1</div>
+          <div class="lev-btn" onclick="setLeverage(2,this)">x2</div>
+          <div class="lev-btn" onclick="setLeverage(5,this)">x5</div>
+          <div class="lev-btn" onclick="setLeverage(10,this)">x10</div>
+          <div class="lev-btn" onclick="setLeverage(20,this)">x20</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUANTITY CONTROL -->
+    <div class="section">
+      <div class="section-title">Tamaño de posición · Bot y Manual</div>
+      <div style="font-size:0.6rem;color:var(--text3);margin-bottom:7px;line-height:1.4;">El bot y las órdenes manuales usan este tamaño. Las acciones pueden ser fraccionarias (ej. 1.3).</div>
+      <div style="margin-bottom:10px;">
+        <select class="risk-input" id="qty-mode-select" onchange="setQtyMode(this.value)">
+          <option value="pct">% del Capital</option>
+          <option value="usd">Cantidad USD</option>
+          <option value="shares">Nº de Acciones</option>
+        </select>
+      </div>
+      <div id="qty-pct-row">
+        <label style="font-size:0.58rem;color:var(--text2);text-transform:uppercase;margin-bottom:3px;display:block;">Porcentaje del Capital</label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="number" id="qty-pct-input" class="risk-input" value="10" min="0.1" max="100" step="0.1" onchange="syncQtyInput()" style="flex:1;text-align:center;font-size:1rem;font-weight:700;padding:8px 10px;">
+          <span style="padding:8px 5px;font-size:0.8rem;color:var(--text2);font-weight:600;">%</span>
+        </div>
+      </div>
+      <input type="range" id="qty-pct-slider" style="display:none;" value="10" min="0.1" max="100" step="0.1">
+      <div id="qty-usd-row" style="display:none;">
+        <label style="font-size:0.58rem;color:var(--text2);text-transform:uppercase;margin-bottom:3px;display:block;">USD a invertir</label>
+        <input type="number" id="qty-usd-input" class="risk-input" value="1000" min="10" step="10" onchange="syncQtyInput()">
+      </div>
+      <div id="qty-shares-row" style="display:none;">
+        <label style="font-size:0.58rem;color:var(--text2);text-transform:uppercase;margin-bottom:3px;display:block;">Nº de acciones (admite decimales)</label>
+        <input type="number" id="qty-shares-input" class="risk-input" value="1" min="0.01" max="100000" step="0.01" placeholder="ej. 1.3" onchange="syncQtyInput()">
+      </div>
+    </div>
+
+    <!-- SIGNAL -->
+    <div class="section" style="flex:1">
+      <div class="section-title">Señal de trading</div>
+      <div style="position:relative;">
+        <div class="signal-card" id="signal-card">
+          <div class="empty-state">
+            <div class="empty-icon">📊</div>
+            <div class="empty-text">Introduce un ticker y pulsa Analizar</div>
+          </div>
+        </div>
+        <div class="loading-overlay" id="signal-loading">
+          <div class="spinner"></div>
+          <div class="loading-text" id="loading-msg">Analizando mercado...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXECUTE -->
+    <div class="section">
+      <div class="section-title">Ejecutar en paper trading</div>
+      <div class="execute-row" id="execute-row">
+        <button class="btn btn-buy" id="exec-buy-btn" onclick="buyNow()" style="flex:1;font-size:0.85rem;font-weight:700;padding:10px 0;letter-spacing:1px;">▲ LONG</button>
+        <button class="btn btn-sell" id="exec-sell-btn" onclick="sellNow()" style="flex:1;font-size:0.85rem;font-weight:700;padding:10px 0;letter-spacing:1px;">▼ SHORT</button>
+      </div>
+      <div id="exec-info" style="font-size:0.66rem;color:var(--text2);margin-top:5px;line-height:1.5;"></div>
+    </div>
+
+    <!-- GROQ API KEY -->
+    <div class="section" id="apikey-section">
+      <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>🔑 Groq API Key</span>
+        <span id="apikey-status" style="font-size:0.6rem;font-weight:700;"></span>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <input type="password" id="groq-key-input" class="risk-input" placeholder="gsk_..." style="flex:1;font-size:0.72rem;" autocomplete="off">
+        <button class="btn btn-primary" onclick="saveGroqKey()" style="padding:6px 10px;font-size:0.72rem;white-space:nowrap;">Guardar</button>
+      </div>
+      <div style="font-size:0.58rem;color:var(--text3);margin-top:4px;">Consigue tu clave gratis en <b style="color:var(--text2);">console.groq.com</b></div>
+    </div>
+
+    <!-- T212 CONNECT (mobile: also accessible via bottom nav) -->
+    <div class="section t212-section-mobile" style="display:none;">
+      <div class="section-title">Trading 212</div>
+      <a href="trading212.html" style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text);transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <span style="font-size:1.5rem;">📡</span>
+        <div>
+          <div style="font-weight:700;font-size:0.85rem;">Conectar Trading 212</div>
+          <div style="font-size:0.66rem;color:var(--text2);margin-top:2px;">API key · cuenta real · órdenes</div>
+        </div>
+        <span style="margin-left:auto;color:var(--accent);font-size:0.8rem;">→</span>
+      </a>
+      <a href="t212-account.html" style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text);transition:border-color 0.2s;margin-top:8px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <span style="font-size:1.5rem;">💰</span>
+        <div>
+          <div style="font-weight:700;font-size:0.85rem;">Ver Cuenta T212</div>
+          <div style="font-size:0.66rem;color:var(--text2);margin-top:2px;">Posiciones · saldo · historial</div>
+        </div>
+        <span style="margin-left:auto;color:var(--accent);font-size:0.8rem;">→</span>
+      </a>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel-right">
+
+    <!-- STATS -->
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-cell">
+        <div class="stat-cell-label">Valor Total Cuenta</div>
+        <div class="stat-cell-value" id="stat-account-value">$10,000.00</div>
+        <div class="stat-cell-sub" id="stat-account-value-pct">0.00%</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell-label">Capital disponible</div>
+        <div class="stat-cell-value" id="stat-capital">$10,000.00</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell-label">PyG Realizado</div>
+        <div class="stat-cell-value" id="stat-realized">$0.00</div>
+        <div class="stat-cell-sub" id="stat-realized-pct">0.00%</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell-label">PyG No Realizado</div>
+        <div class="stat-cell-value" id="stat-unrealized">$0.00</div>
+        <div class="stat-cell-sub" id="stat-unrealized-pct">0.00%</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell-label">Ops. Cerradas</div>
+        <div class="stat-cell-value" id="stat-closed">0</div>
+      </div>
+    </div>
+
+    <!-- CHART TABS -->
+    <div style="display:flex;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);">
+      <button class="chart-tab active" onclick="switchChartView('tradingview')" id="tab-tradingview">TradingView</button>
+      <button class="chart-tab" onclick="switchChartView('realtime')" id="tab-realtime">⚡ En Vivo</button>
+      <span class="chart-tab-hint">TradingView (acciones) ~15min retraso · "En Vivo" = precio real sin retraso</span>
+    </div>
+
+    <!-- TRADINGVIEW CHART -->
+    <div id="chart-tradingview-view" style="flex:1;display:flex;flex-direction:column;">
+      <!-- CHART CONTROLS -->
+      <div class="chart-controls">
+        <button class="tf-btn" onclick="setChartTF('1',this)" id="tf-1m">1m</button>
+        <button class="tf-btn" onclick="setChartTF('5',this)" id="tf-5m">5m</button>
+        <button class="tf-btn" onclick="setChartTF('15',this)" id="tf-15m">15m</button>
+        <button class="tf-btn" onclick="setChartTF('30',this)" id="tf-30m">30m</button>
+        <div class="tf-divider"></div>
+        <button class="tf-btn" onclick="setChartTF('60',this)" id="tf-1h">1H</button>
+        <button class="tf-btn" onclick="setChartTF('240',this)" id="tf-4h">4H</button>
+        <button class="tf-btn active" onclick="setChartTF('D',this)" id="tf-1d">1D</button>
+        <button class="tf-btn" onclick="setChartTF('W',this)" id="tf-1w">1W</button>
+        <div class="tf-divider"></div>
+        <div class="chart-price-display">
+          <span id="chart-name" style="font-size:0.78rem;color:var(--text2);font-weight:700;margin-right:6px;"></span>
+          <span id="chart-price" style="font-size:0.95rem;font-weight:700;"></span>
+          <span id="chart-change" style="font-size:0.72rem;margin-left:6px;"></span>
+          <span class="live-badge" id="data-badge">LIVE</span>
+        </div>
+      </div>
+
+      <div class="chart-area" id="chart-area">
+        <div id="tv-widget-container">
+          <div class="chart-empty" id="chart-empty">
+            <div style="font-size:1.5rem">📈</div>
+            <div>El gráfico aparecerá tras el análisis</div>
+            <div style="font-size:0.68rem;color:var(--text3);">Powered by TradingView</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REALTIME CHART -->
+    <div id="chart-realtime-view" style="flex:1;display:none;flex-direction:column;background:var(--bg);">
+      <div style="padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:0.7rem;color:var(--accent);font-weight:600;">⚡ Precio real en vivo — sin retraso (Yahoo / Binance)</div>
+        <div style="font-size:0.62rem;color:var(--text2);">Se actualiza cada 3-5s</div>
+      </div>
+      <div style="flex:1;position:relative;min-height:0;"><canvas id="realtime-canvas" style="position:absolute;inset:0;"></canvas></div>
+    </div>
+
+    <!-- POSITIONS -->
+    <div class="positions-panel">
+      <div class="positions-header">
+        <div class="positions-title">Posiciones abiertas</div>
+        <div id="open-count" style="font-family:var(--mono);font-size:0.7rem;color:var(--text2);">0 posiciones</div>
+      </div>
+      <div class="positions-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Lado</th>
+              <th>Lev</th>
+              <th>Entrada</th>
+              <th>Actual</th>
+              <th>Qty</th>
+              <th>SL</th>
+              <th>TP</th>
+              <th>PyG $</th>
+              <th>PyG %</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="positions-body">
+            <tr><td colspan="11" style="text-align:center;color:var(--text3);padding:14px;font-size:0.7rem;">No hay posiciones abiertas</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HISTORIAL DE MOVIMIENTOS -->
+    <div class="movements-panel">
+      <div class="movements-header">
+        <div class="positions-title">Historial de movimientos</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="movements-count" style="font-family:var(--mono);font-size:0.66rem;color:var(--text2);">0 mov.</span>
+          <button class="clear-all-btn" onclick="clearMovements()" title="Vaciar todo el historial">Vaciar todo</button>
+        </div>
+      </div>
+      <div class="movements-body" id="movements-body">
+        <div style="text-align:center;color:var(--text3);padding:14px;font-size:0.7rem;">Sin movimientos todavía</div>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="log-panel">
+      <div class="log-header">Log de operaciones</div>
+      <div class="log-content" id="log-content"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav" id="mobile-nav">
+  <button class="mobile-nav-btn active" id="mnav-control" onclick="mobileTab('control')">
+    <span class="mobile-nav-icon">⚙️</span>
+    Control
+  </button>
+  <button class="mobile-nav-btn" id="mnav-chart" onclick="mobileTab('chart')">
+    <span class="mobile-nav-icon">📈</span>
+    Gráfico
+  </button>
+  <button class="mobile-nav-btn" id="mnav-positions" onclick="mobileTab('positions')">
+    <span class="mobile-nav-icon">💼</span>
+    Posiciones
+  </button>
+  <button class="mobile-nav-btn" id="mnav-t212" onclick="mobileTab('t212')">
+    <span class="mobile-nav-icon">📡</span>
+    T212
+  </button>
+</nav>
+
+<!-- TradingView Widget Script -->
+<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/trading.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/app.js"></script>
+
+<script>
+(function() {
+  var panelLeft    = document.querySelector('.panel-left');
+  var panelRight   = document.querySelector('.panel-right');
+  var t212Section  = document.querySelector('.t212-section-mobile');
+  var btnControl   = document.getElementById('mnav-control');
+  var btnChart     = document.getElementById('mnav-chart');
+  var btnPositions = document.getElementById('mnav-positions');
+  var btnT212      = document.getElementById('mnav-t212');
+
+  function isMobile() { return window.innerWidth <= 768; }
+
+  function clearAllTabs() {
+    [btnControl, btnChart, btnPositions, btnT212].forEach(function(b) { b.classList.remove('active'); });
+    panelLeft.classList.remove('mobile-active');
+    panelRight.classList.remove('mobile-active');
+  }
+
+  window.mobileTab = function(tab) {
+    if (!isMobile()) return;
+    clearAllTabs();
+
+    if (tab === 'control') {
+      panelLeft.classList.add('mobile-active');
+      if (t212Section) t212Section.style.display = 'none';
+      btnControl.classList.add('active');
+    } else if (tab === 'chart') {
+      panelRight.classList.add('mobile-active');
+      btnChart.classList.add('active');
+      var chartArea = document.getElementById('chart-area');
+      if (chartArea) setTimeout(function() { chartArea.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
+    } else if (tab === 'positions') {
+      panelRight.classList.add('mobile-active');
+      btnPositions.classList.add('active');
+      var posPanel = document.querySelector('.positions-panel');
+      if (posPanel) setTimeout(function() { posPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+    } else if (tab === 't212') {
+      panelLeft.classList.add('mobile-active');
+      if (t212Section) t212Section.style.display = 'block';
+      btnT212.classList.add('active');
+      if (t212Section) setTimeout(function() { t212Section.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+    }
+  };
+
+  // Groq API key UI
+  window.saveGroqKey = function() {
+    var key = document.getElementById('groq-key-input').value.trim();
+    if (!key) return;
+    if (typeof setGroqApiKey === 'function') setGroqApiKey(key);
+    else { localStorage.setItem('groq_api_key', key); if (window.state) state.groq_api_key = key; }
+    document.getElementById('groq-key-input').value = '';
+    updateKeyStatus();
+  };
+  function updateKeyStatus() {
+    var stored = localStorage.getItem('groq_api_key') || '';
+    var el = document.getElementById('apikey-status');
+    if (!el) return;
+    if (stored && stored.length > 10) {
+      el.textContent = '✅ Configurada';
+      el.style.color = 'var(--accent)';
+    } else {
+      el.textContent = '⚠️ Sin clave';
+      el.style.color = 'var(--yellow)';
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function() { updateKeyStatus(); });
+
+  // Init on load
+  if (isMobile()) {
+    panelLeft.classList.add('mobile-active');
+  }
+
+  window.addEventListener('resize', function() {
+    if (!isMobile()) {
+      panelLeft.classList.remove('mobile-active');
+      panelRight.classList.remove('mobile-active');
+      if (t212Section) t212Section.style.display = 'none';
+    } else if (!panelLeft.classList.contains('mobile-active') && !panelRight.classList.contains('mobile-active')) {
+      panelLeft.classList.add('mobile-active');
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

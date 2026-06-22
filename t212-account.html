@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading 212 — Mi Cuenta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #080b10;
+  --surface:  #0f1520;
+  --card:     #131b28;
+  --card2:    #192133;
+  --border:   #1d2d42;
+  --accent:   #00d4a0;
+  --accent2:  rgba(0,212,160,.12);
+  --red:      #ff4d6a;
+  --red2:     rgba(255,77,106,.12);
+  --yellow:   #f5c542;
+  --text:     #e8edf5;
+  --text2:    #7a8fa8;
+  --text3:    #354d66;
+  --font:     'Space Grotesk', sans-serif;
+  --mono:     'JetBrains Mono', monospace;
+  --r:        12px;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:var(--bg); color:var(--text);
+  font-family:var(--font); min-height:100vh;
+  display:flex; flex-direction:column; align-items:center;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  width:100%; background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 24px; height:52px;
+  position:sticky; top:0; z-index:100;
+}
+.topbar-logo {
+  display:flex; align-items:center; gap:10px;
+  font-weight:700; font-size:1rem;
+}
+.pulse {
+  width:9px; height:9px; border-radius:50%;
+  background:var(--accent); box-shadow:0 0 10px var(--accent);
+  animation:glow 2s ease-in-out infinite;
+}
+@keyframes glow {
+  0%,100% { box-shadow:0 0 8px var(--accent); }
+  50%      { box-shadow:0 0 18px var(--accent); }
+}
+.topbar-subtitle { font-size:.65rem; color:var(--text3); font-weight:400; margin-left:4px; }
+.topbar-status {
+  display:flex; align-items:center; gap:8px;
+  font-size:.68rem; color:var(--text3);
+}
+.dot-status { width:7px; height:7px; border-radius:50%; background:var(--text3); }
+.dot-status.on { background:var(--accent); box-shadow:0 0 6px var(--accent); }
+
+/* ── CONTENT ── */
+.wrap {
+  width:100%; max-width:560px;
+  padding:40px 16px 80px;
+  display:flex; flex-direction:column; gap:20px;
+}
+
+/* ── CARDS ── */
+.card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--r); overflow:hidden;
+}
+.card-head {
+  padding:14px 20px 10px;
+  font-size:.6rem; text-transform:uppercase; letter-spacing:1.5px;
+  color:var(--text3); font-weight:700;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.card-head span { font-size:.6rem; }
+.chip {
+  padding:2px 8px; border-radius:5px; font-size:.58rem; font-weight:700;
+  letter-spacing:.5px;
+}
+.chip-green { background:var(--accent2); color:var(--accent); border:1px solid rgba(0,212,160,.2); }
+.chip-red   { background:var(--red2);    color:var(--red);    border:1px solid rgba(255,77,106,.2); }
+.chip-grey  { background:var(--card2);   color:var(--text2);  border:1px solid var(--border); }
+.card-body  { padding:20px; }
+
+/* ── FORM ── */
+.field { margin-bottom:14px; }
+.field:last-of-type { margin-bottom:0; }
+.field label {
+  display:block; font-size:.6rem; color:var(--text2);
+  text-transform:uppercase; letter-spacing:1px;
+  margin-bottom:6px; font-weight:600;
+}
+.input-wrap { position:relative; }
+.input-wrap input {
+  width:100%; background:var(--card2);
+  border:1px solid var(--border); border-radius:8px;
+  color:var(--text); font-family:var(--mono); font-size:.8rem;
+  padding:11px 42px 11px 13px; outline:none;
+  transition:border-color .2s, box-shadow .2s;
+}
+.input-wrap input:focus {
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(0,212,160,.08);
+}
+.input-wrap input::placeholder { color:var(--text3); font-family:var(--mono); }
+.input-eye {
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  background:none; border:none; color:var(--text3); cursor:pointer;
+  font-size:.85rem; line-height:1; padding:2px;
+}
+.input-eye:hover { color:var(--text2); }
+.field-note {
+  margin-top:5px; font-size:.6rem; color:var(--text3); line-height:1.6;
+}
+.field-note strong { color:var(--text2); }
+.field-note code {
+  font-family:var(--mono); font-size:.58rem;
+  background:rgba(0,212,160,.1); color:var(--accent);
+  border-radius:3px; padding:1px 5px;
+}
+
+/* ── BUTTON ── */
+.btn-main {
+  width:100%; padding:13px;
+  background:var(--accent); color:#000;
+  border:none; border-radius:9px;
+  font-family:var(--font); font-size:.88rem; font-weight:700;
+  cursor:pointer; letter-spacing:.3px;
+  transition:opacity .2s, transform .1s;
+  margin-top:18px;
+}
+.btn-main:hover   { opacity:.88; }
+.btn-main:active  { transform:scale(.98); }
+.btn-main:disabled { opacity:.4; cursor:not-allowed; }
+
+.btn-sec {
+  width:100%; padding:10px;
+  background:var(--card2); color:var(--text2);
+  border:1px solid var(--border); border-radius:9px;
+  font-family:var(--font); font-size:.8rem; font-weight:600;
+  cursor:pointer; transition:border-color .2s, color .2s;
+  margin-top:10px;
+}
+.btn-sec:hover { border-color:var(--accent); color:var(--accent); }
+
+/* ── STATUS ── */
+.status {
+  display:none; align-items:center; gap:10px;
+  padding:11px 14px; border-radius:8px; margin-top:14px;
+  font-size:.73rem; font-weight:600;
+}
+.status.ok      { display:flex; background:var(--accent2); border:1px solid rgba(0,212,160,.2); color:var(--accent); }
+.status.err     { display:flex; background:var(--red2);    border:1px solid rgba(255,77,106,.2); color:var(--red); }
+.status.loading { display:flex; background:var(--card2);   border:1px solid var(--border);       color:var(--text2); }
+.spin {
+  flex-shrink:0; width:14px; height:14px; border-radius:50%;
+  border:2px solid var(--border); border-top-color:var(--text2);
+  animation:sp .7s linear infinite;
+}
+@keyframes sp { to { transform:rotate(360deg); } }
+
+/* ── ACCOUNT GRID ── */
+.acct-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.acct-cell {
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:9px; padding:13px 14px;
+}
+.acct-cell .lbl { font-size:.55rem; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:5px; }
+.acct-cell .val { font-family:var(--mono); font-size:1.05rem; font-weight:700; }
+.acct-cell .val.green  { color:var(--accent); }
+.acct-cell .val.yellow { color:var(--yellow); }
+.acct-cell .val.red    { color:var(--red); }
+
+/* Balance cell spans full width */
+.acct-cell.wide { grid-column:1/-1; }
+.acct-cell.wide .val { font-size:1.4rem; }
+
+/* ── SECTION TOGGLE ── */
+.hidden { display:none !important; }
+
+/* ── TABLE ── */
+.tbl-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:.71rem; }
+thead th {
+  text-align:left; padding:7px 10px;
+  font-size:.55rem; text-transform:uppercase; letter-spacing:1px;
+  color:var(--text3); border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+tbody td {
+  padding:9px 10px; border-bottom:1px solid rgba(29,45,66,.5);
+  color:var(--text2); white-space:nowrap;
+}
+tbody td.tk { color:var(--text); font-weight:700; font-family:var(--mono); }
+tbody td.pos { color:var(--accent); font-family:var(--mono); }
+tbody td.neg { color:var(--red);    font-family:var(--mono); }
+tbody td.neu { color:var(--text2);  font-family:var(--mono); }
+tbody tr:last-child td { border-bottom:none; }
+tbody tr:hover td { background:rgba(255,255,255,.015); }
+
+.empty-row td { text-align:center; color:var(--text3); padding:24px; }
+
+/* ── INFO NOTE ── */
+.info-note {
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:9px; padding:13px 16px;
+  font-size:.65rem; color:var(--text3); line-height:1.8;
+}
+.info-note strong { color:var(--text2); }
+.info-note code {
+  font-family:var(--mono); font-size:.62rem;
+  background:rgba(0,212,160,.08); color:var(--accent);
+  border-radius:3px; padding:1px 5px;
+}
+.info-note .dead {
+  opacity:.45; text-decoration:line-through;
+}
+.sep { height:1px; background:var(--border); margin:16px 0; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <div class="pulse"></div>
+    Trading 212
+    <span class="topbar-subtitle">Mi cuenta</span>
+  </div>
+  <div class="topbar-status">
+    <div class="dot-status" id="conn-dot"></div>
+    <span id="conn-label">Sin conectar</span>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="wrap">
+
+  <!-- ── CREDENCIALES ── -->
+  <div class="card">
+    <div class="card-head">
+      Credenciales API
+      <span class="chip chip-green">LIVE</span>
+    </div>
+    <div class="card-body">
+
+      <!-- API Key -->
+      <div class="field">
+        <label>Llave API (API Key)</label>
+        <div class="input-wrap">
+          <input type="password" id="f-key" placeholder="Pega tu API key de Trading 212" autocomplete="off">
+          <button class="input-eye" onclick="toggleVis('f-key',this)" title="Mostrar/ocultar">👁</button>
+        </div>
+        <div class="field-note">
+          <strong>Dónde obtenerla:</strong> Trading 212 → Configuración →
+          API (experimental) → Generar clave.<br>
+          Es la única credencial que necesita la API pública de T212.
+        </div>
+      </div>
+
+      <!-- Account ID -->
+      <div class="field">
+        <label>ID de cuenta <span style="color:var(--text3);font-size:.58rem;text-transform:none;">(opcional — se detecta solo)</span></label>
+        <div class="input-wrap">
+          <input type="text" id="f-id" placeholder="p.ej.  1234567" autocomplete="off">
+        </div>
+        <div class="field-note">Si no lo sabes, déjalo vacío — se obtiene automáticamente al conectar.</div>
+      </div>
+
+      <!-- Secret -->
+      <div class="field">
+        <label>Secreto / Secret</label>
+        <div class="input-wrap">
+          <input type="password" id="f-secret" placeholder="No requerido por Trading 212" autocomplete="off" style="opacity:.45;" disabled>
+        </div>
+        <div class="field-note">
+          La API de Trading 212 <strong>no usa secreto separado</strong>.
+          Solo necesitas la <strong>API Key</strong> del campo superior.
+        </div>
+      </div>
+
+      <button class="btn-main" id="btn-connect" onclick="connect()">
+        Conectar con Trading 212
+      </button>
+
+      <div class="status" id="status">
+        <div class="spin" id="st-spin" style="display:none;"></div>
+        <span id="st-msg"></span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── CUENTA ── -->
+  <div class="card hidden" id="acct-card">
+    <div class="card-head">
+      Mi cuenta
+      <span class="chip" id="acct-type-chip">—</span>
+    </div>
+    <div class="card-body">
+      <div class="acct-grid" id="acct-grid"></div>
+
+      <button class="btn-sec" onclick="loadPortfolio()" style="margin-top:16px;">
+        Cargar posiciones abiertas
+      </button>
+      <button class="btn-sec" onclick="loadOrders()">
+        Cargar historial de órdenes
+      </button>
+    </div>
+  </div>
+
+  <!-- ── PORTFOLIO ── -->
+  <div class="card hidden" id="port-card">
+    <div class="card-head">
+      Posiciones abiertas
+      <span class="chip chip-grey" id="port-count">0</span>
+    </div>
+    <div class="card-body" style="padding:0;">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Precio medio</th>
+              <th>Precio actual</th>
+              <th>Cantidad</th>
+              <th>Valor (€/$)</th>
+              <th>PyG</th>
+              <th>PyG %</th>
+            </tr>
+          </thead>
+          <tbody id="port-body">
+            <tr class="empty-row"><td colspan="7">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ÓRDENES ── -->
+  <div class="card hidden" id="orders-card">
+    <div class="card-head">
+      Historial de órdenes
+      <span class="chip chip-grey" id="orders-count">0</span>
+    </div>
+    <div class="card-body" style="padding:0;">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Tipo</th>
+              <th>Lado</th>
+              <th>Cantidad</th>
+              <th>Precio</th>
+              <th>Estado</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody id="orders-body">
+            <tr class="empty-row"><td colspan="7">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── NOTA ── -->
+  <div class="info-note">
+    <strong>Endpoints vigentes de la API v0:</strong><br>
+    <code>GET /api/v0/equity/account/info</code> — datos de cuenta<br>
+    <code>GET /api/v0/equity/portfolio</code> — posiciones abiertas<br>
+    <code>GET /api/v0/equity/orders</code> — historial de órdenes<br>
+    <div class="sep"></div>
+    <strong>Endpoint obsoleto (no usar):</strong><br>
+    <code class="dead">/api/v0/equity/account/cash</code><br>
+    <div class="sep"></div>
+    <strong>Nota CORS:</strong> Si ves error de CORS al abrir el archivo directamente,
+    lanza un servidor local: <code>python -m http.server 8080</code>
+    y abre <code>http://localhost:8080/t212-account.html</code>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+const BASE = 'https://live.trading212.com/api/v0';
+
+/* ── Persist ─────────────────────────────────── */
+(function restore() {
+  const k = localStorage.getItem('t212_key');
+  const i = localStorage.getItem('t212_id');
+  if (k) document.getElementById('f-key').value = k;
+  if (i) document.getElementById('f-id').value  = i;
+})();
+
+/* ── Helpers ──────────────────────────────────── */
+function toggleVis(id, btn) {
+  const el = document.getElementById(id);
+  el.type  = el.type === 'password' ? 'text' : 'password';
+  btn.textContent = el.type === 'password' ? '👁' : '🙈';
+}
+
+function setStatus(type, msg, spin = false) {
+  const bar = document.getElementById('status');
+  bar.className = 'status ' + type;
+  document.getElementById('st-spin').style.display = spin ? 'inline-block' : 'none';
+  document.getElementById('st-msg').textContent = msg;
+}
+
+function setConn(connected, label) {
+  const dot = document.getElementById('conn-dot');
+  dot.className = 'dot-status' + (connected ? ' on' : '');
+  document.getElementById('conn-label').textContent = label;
+}
+
+function fmt(n) {
+  if (n == null) return '—';
+  return parseFloat(n).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+}
+
+function fmtPnl(n) {
+  if (n == null) return { str: '—', cls: 'neu' };
+  const v = parseFloat(n);
+  return {
+    str: (v >= 0 ? '+' : '') + fmt(v),
+    cls: v > 0 ? 'pos' : v < 0 ? 'neg' : 'neu'
+  };
+}
+
+function apiKey() {
+  return (localStorage.getItem('t212_key') || document.getElementById('f-key').value).trim();
+}
+
+async function apiFetch(path) {
+  const res = await fetch(BASE + path, {
+    headers: { 'Authorization': apiKey() }
+  });
+  if (res.status === 401) throw new Error('API key inválida o sin permisos (401).');
+  if (res.status === 429) throw new Error('Límite de peticiones alcanzado — espera unos segundos (429).');
+  if (!res.ok) throw new Error(`Error del servidor: ${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+/* ── Connect ──────────────────────────────────── */
+async function connect() {
+  const key = document.getElementById('f-key').value.trim();
+  if (!key) { setStatus('err', 'Introduce tu API key para continuar.'); return; }
+
+  const btn = document.getElementById('btn-connect');
+  btn.disabled = true;
+  setStatus('loading', 'Conectando con Trading 212…', true);
+  setConn(false, 'Conectando…');
+  document.getElementById('acct-card').classList.add('hidden');
+  document.getElementById('port-card').classList.add('hidden');
+  document.getElementById('orders-card').classList.add('hidden');
+
+  try {
+    const data = await apiFetch('/equity/account/info');
+
+    localStorage.setItem('t212_key', key);
+    localStorage.setItem('t212_id', data.id ?? '');
+    if (data.id) document.getElementById('f-id').value = data.id;
+
+    renderAccount(data);
+    setStatus('ok', `Conectado — cuenta ${data.id ?? ''} · ${data.type ?? 'LIVE'} · ${data.currencyCode ?? ''}`);
+    setConn(true, `Cuenta ${data.id ?? ''}`);
+
+  } catch (err) {
+    const msg = err.name === 'TypeError'
+      ? 'Error de red / CORS. Prueba desde un servidor local (ver nota al pie).'
+      : err.message;
+    setStatus('err', msg);
+    setConn(false, 'Error de conexión');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderAccount(data) {
+  const typeColor = data.type === 'DEMO' ? 'yellow' : 'green';
+  const grid = document.getElementById('acct-grid');
+
+  grid.innerHTML = `
+    <div class="acct-cell">
+      <div class="lbl">ID de cuenta</div>
+      <div class="val">${data.id ?? '—'}</div>
+    </div>
+    <div class="acct-cell">
+      <div class="lbl">Tipo</div>
+      <div class="val ${typeColor}">${data.type ?? '—'}</div>
+    </div>
+    <div class="acct-cell">
+      <div class="lbl">Divisa base</div>
+      <div class="val">${data.currencyCode ?? '—'}</div>
+    </div>
+    <div class="acct-cell">
+      <div class="lbl">Modo demo</div>
+      <div class="val">${data.type === 'DEMO' ? 'Sí' : 'No'}</div>
+    </div>
+  `;
+
+  const chip = document.getElementById('acct-type-chip');
+  chip.textContent = data.type ?? 'LIVE';
+  chip.className   = 'chip ' + (data.type === 'DEMO' ? 'chip-grey' : 'chip-green');
+
+  document.getElementById('acct-card').classList.remove('hidden');
+}
+
+/* ── Portfolio ────────────────────────────────── */
+async function loadPortfolio() {
+  setStatus('loading', 'Cargando posiciones…', true);
+  try {
+    const raw  = await apiFetch('/equity/portfolio');
+    const list = Array.isArray(raw) ? raw : (raw.open ?? raw.items ?? []);
+
+    document.getElementById('port-count').textContent = list.length;
+    document.getElementById('port-card').classList.remove('hidden');
+
+    if (list.length === 0) {
+      document.getElementById('port-body').innerHTML =
+        '<tr class="empty-row"><td colspan="7">No hay posiciones abiertas.</td></tr>';
+    } else {
+      document.getElementById('port-body').innerHTML = list.map(p => {
+        const pnl    = fmtPnl(p.ppl ?? p.unrealisedProfit ?? p.unrealised);
+        const pnlPct = p.fxPpl != null
+          ? fmtPnl(((p.ppl ?? 0) / ((p.averagePrice ?? 1) * (p.quantity ?? 1))) * 100)
+          : { str: '—', cls: 'neu' };
+        const val    = p.currentPrice && p.quantity
+          ? fmt(parseFloat(p.currentPrice) * parseFloat(p.quantity))
+          : '—';
+        return `<tr>
+          <td class="tk">${p.ticker ?? p.symbol ?? '—'}</td>
+          <td class="neu">${fmt(p.averagePrice ?? p.avgPrice)}</td>
+          <td class="neu">${fmt(p.currentPrice)}</td>
+          <td class="neu">${p.quantity ?? '—'}</td>
+          <td class="neu">${val}</td>
+          <td class="${pnl.cls}">${pnl.str}</td>
+          <td class="${pnlPct.cls}">${pnlPct.str !== '—' ? pnlPct.str + '%' : '—'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    setStatus('ok', `${list.length} posición/es cargada/s`);
+  } catch (err) {
+    setStatus('err', err.message);
+  }
+}
+
+/* ── Orders ───────────────────────────────────── */
+async function loadOrders() {
+  setStatus('loading', 'Cargando historial de órdenes…', true);
+  try {
+    const raw  = await apiFetch('/equity/orders');
+    const list = Array.isArray(raw) ? raw : (raw.items ?? []);
+
+    document.getElementById('orders-count').textContent = list.length;
+    document.getElementById('orders-card').classList.remove('hidden');
+
+    if (list.length === 0) {
+      document.getElementById('orders-body').innerHTML =
+        '<tr class="empty-row"><td colspan="7">No hay órdenes en el historial.</td></tr>';
+    } else {
+      const sideLabel = s => s === 'BUY' ? '<span style="color:var(--accent)">Compra</span>' : '<span style="color:var(--red)">Venta</span>';
+      const stateLabel = s => {
+        const m = { FILLED:'Ejecutada', CANCELLED:'Cancelada', REJECTED:'Rechazada', NEW:'Pendiente' };
+        return m[s] || s;
+      };
+      const fmtDate = d => {
+        if (!d) return '—';
+        const dt = new Date(d);
+        return isNaN(dt) ? d : dt.toLocaleString('es-ES', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+      };
+
+      document.getElementById('orders-body').innerHTML = list.map(o => `<tr>
+        <td class="tk">${o.ticker ?? '—'}</td>
+        <td class="neu">${o.type ?? '—'}</td>
+        <td>${sideLabel(o.side ?? o.direction)}</td>
+        <td class="neu">${o.filledQuantity ?? o.quantity ?? '—'}</td>
+        <td class="neu">${fmt(o.fillPrice ?? o.limitPrice)}</td>
+        <td class="neu">${stateLabel(o.status ?? o.state)}</td>
+        <td class="neu" style="font-size:.62rem;">${fmtDate(o.dateModified ?? o.dateCreated)}</td>
+      </tr>`).join('');
+    }
+
+    setStatus('ok', `${list.length} orden/es cargada/s`);
+  } catch (err) {
+    setStatus('err', err.message);
+  }
+}
+</script>
+</body>
+</html>
