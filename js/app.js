@@ -159,11 +159,11 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPositions();
   if (typeof renderMovements === 'function') renderMovements();
   window.addEventListener('resize', () => { if (typeof drawLiveChart === 'function') drawLiveChart(); });
-  // Restore last ticker
-  if (state.current_ticker) {
-    const inp = document.getElementById('ticker-input');
-    if (inp) inp.value = state.current_ticker;
-  }
+  // Restore last ticker and auto-load chart
+  const startTicker = state.current_ticker || 'BTC-USD';
+  const inp = document.getElementById('ticker-input');
+  if (inp) inp.value = startTicker;
+  if (typeof loadTVEmbed === 'function') loadTVEmbed(startTicker);
   setTimeout(() => { if (typeof enableExecuteButtons === 'function') enableExecuteButtons(); }, 200);
   log('TradeBot AI iniciado ✅', 'info');
 });
