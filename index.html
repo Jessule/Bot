@@ -226,6 +226,19 @@
       <div id="exec-info" style="font-size:0.66rem;color:var(--text2);margin-top:5px;line-height:1.5;"></div>
     </div>
 
+    <!-- GROQ API KEY -->
+    <div class="section" id="apikey-section">
+      <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>🔑 Groq API Key</span>
+        <span id="apikey-status" style="font-size:0.6rem;font-weight:700;"></span>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <input type="password" id="groq-key-input" class="risk-input" placeholder="gsk_..." style="flex:1;font-size:0.72rem;" autocomplete="off">
+        <button class="btn btn-primary" onclick="saveGroqKey()" style="padding:6px 10px;font-size:0.72rem;white-space:nowrap;">Guardar</button>
+      </div>
+      <div style="font-size:0.58rem;color:var(--text3);margin-top:4px;">Consigue tu clave gratis en <b style="color:var(--text2);">console.groq.com</b></div>
+    </div>
+
     <!-- T212 CONNECT (mobile: also accessible via bottom nav) -->
     <div class="section t212-section-mobile" style="display:none;">
       <div class="section-title">Trading 212</div>
@@ -452,6 +465,29 @@
       if (t212Section) setTimeout(function() { t212Section.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
     }
   };
+
+  // Groq API key UI
+  window.saveGroqKey = function() {
+    var key = document.getElementById('groq-key-input').value.trim();
+    if (!key) return;
+    if (typeof setGroqApiKey === 'function') setGroqApiKey(key);
+    else { localStorage.setItem('groq_api_key', key); if (window.state) state.groq_api_key = key; }
+    document.getElementById('groq-key-input').value = '';
+    updateKeyStatus();
+  };
+  function updateKeyStatus() {
+    var stored = localStorage.getItem('groq_api_key') || '';
+    var el = document.getElementById('apikey-status');
+    if (!el) return;
+    if (stored && stored.length > 10) {
+      el.textContent = '✅ Configurada';
+      el.style.color = 'var(--accent)';
+    } else {
+      el.textContent = '⚠️ Sin clave';
+      el.style.color = 'var(--yellow)';
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function() { updateKeyStatus(); });
 
   // Init on load
   if (isMobile()) {
