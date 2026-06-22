@@ -63,15 +63,16 @@ function loadTVEmbed(ticker) {
 
   container.innerHTML = `
     <iframe
-      src="https://s.tradingview.com/widgetembed/?frameElementId=tv-embed&symbol=${encodeURIComponent(symbol)}&interval=${interval}&hidesidetoolbar=0&hidetoptoolbar=0&saveimage=0&toolbarbg=111620&theme=dark&style=1&timezone=Europe%2FMadrid&studies=${studies}&locale=es&withdateranges=1&allow_symbol_change=1"
+      src="https://s.tradingview.com/widgetembed/?frameElementId=tv-embed&symbol=${encodeURIComponent(symbol)}&interval=${interval}&hidesidetoolbar=0&hidetoptoolbar=0&saveimage=1&toolbarbg=111620&theme=dark&style=1&timezone=Europe%2FMadrid&studies=${studies}&locale=es&withdateranges=1&allow_symbol_change=1&details=1&hotlist=1&calendar=0&news=0&hide_legend=0&hide_volume=0"
       style="width:100%;height:100%;border:none;"
       id="tv-embed"
-      allow="clipboard-read; clipboard-write"
+      allow="clipboard-read; clipboard-write; fullscreen"
     ></iframe>
   `;
 
   const empty = document.getElementById('chart-empty');
   if (empty) empty.style.display = 'none';
+  state.current_ticker = ticker;
 }
 
 function setChartTF(tf, el) {

@@ -2,7 +2,6 @@
 // STATE & PERSISTENCE
 // ══════════════════════════════════════════
 const INITIAL_CAPITAL = 10000;
-const GROQ_KEY = ''; // Set your Groq API key here
 
 let state = {
   capital: INITIAL_CAPITAL,
@@ -32,8 +31,7 @@ let state = {
   chart_view: 'tradingview',
   session_start: new Date().toDateString(),
   qty_mode: 'pct',
-  qty_value: 10,
-  groq_api_key: localStorage.getItem('groq_api_key') || GROQ_KEY
+  qty_value: 10
 };
 
 function saveState(silent = false) {
@@ -127,10 +125,4 @@ function resetState() {
 function markUnsaved() {
   document.getElementById('save-dot').className = 'save-dot';
   document.getElementById('save-text').textContent = 'Sin guardar';
-}
-
-function setGroqApiKey(key) {
-  state.groq_api_key = (key || '').trim() || GROQ_KEY;
-  localStorage.setItem('groq_api_key', state.groq_api_key);
-  log(key ? '✅ Groq API key actualizada' : '✅ Usando API key por defecto', 'info');
 }
