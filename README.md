@@ -21,3 +21,10 @@ y solo se usan para mostrar saldo/posiciones reales; las órdenes del bot son si
 **No pegues las claves en el chat ni las subas al repo.**
 
 > La web anterior (`index.html`, `js/`) no se ha tocado.
+
+## 📱 Versión móvil (`grok.html`)
+Una sola página HTML, sin servidor ni PC: estilo de juego (botones gruesos, filas de colores, líneas onduladas = los 6 agentes, árbol de leverage, barra de iconos).
+Los precios los pide el propio navegador del móvil (Binance para crypto; Yahoo vía proxy CORS para acciones/metales). Cartera y ajustes se guardan en el móvil (localStorage).
+- Los agentes usan reglas (RSI, medias, titulares); con una clave gratuita de Groq (opcional, se guarda solo en el móvil) Skeptic y Chief redactan con llama.
+- `grok.html?demo=1` usa precios simulados (con banner) para probar el diseño.
+- Para abrirlo en el móvil: GitHub → Settings → Pages → Deploy from a branch → rama y carpeta `/ (root)`; luego `https://<usuario>.github.io/bot/grok.html`.
