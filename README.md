@@ -28,3 +28,8 @@ Los precios los pide el propio navegador del móvil (Binance para crypto; Yahoo 
 - Los agentes usan reglas (RSI, medias, titulares); con una clave gratuita de Groq (opcional, se guarda solo en el móvil) Skeptic y Chief redactan con llama.
 - `grok.html?demo=1` usa precios simulados (con banner) para probar el diseño.
 - Para abrirlo en el móvil: GitHub → Settings → Pages → Deploy from a branch → rama y carpeta `/ (root)`; luego `https://<usuario>.github.io/bot/grok.html`.
+
+### Precios reales de Yahoo
+`.github/workflows/prices.yml` baja cada 5 min las velas de Yahoo (yfinance) y las publica en la rama `prices` (`prices.json`);
+`grok.html` las lee de ahí (sin proxies ni claves) y usa los proxies solo como respaldo. Crypto va directo a Binance.
+Los workflows programados solo corren desde la rama por defecto: haz merge a `main`, luego Actions → prices → Run workflow, y activa Pages.

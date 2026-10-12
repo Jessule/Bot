@@ -200,6 +200,8 @@ const AGENTS = [
   ['Skeptic','#2fe6d0','Busca motivos para no entrar'],
   ['Chief','#3d7bff','Decide LONG / SHORT'],
 ];
+/* Feed de Yahoo que publica el workflow prices.yml cada 5 min (raw.githubusercontent.com permite CORS) */
+const PRICES_URL = 'https://raw.githubusercontent.com/jessule/bot/prices/prices.json';
 const PROXIES = [u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`, u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`];
 /* demo = precios simulados: con ?demo=1 o dentro de un visor sin red (claude.ai) */
 const DEMO = new URLSearchParams(location.search).has('demo') || !!(window.claude && window.claude.use);
@@ -245,6 +247,8 @@ async function loadBinance(sym){
   return {closes:k.map(x=>+x[4]), stale:false};
 }
 async function loadYahoo(sym){
+  const f=S.feed&&S.feed.data&&S.feed.data[sym];
+  if(f&&Date.now()/1000-S.feed.updated<1500){ S.src='Yahoo'; return {closes:f.closes, stale:(Date.now()/1000-f.last_ts)/60>STALE_MIN}; }
   const u=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(A[sym].yf)}?interval=1m&range=1d`;
   let err;
   for(const p of PROXIES){
@@ -254,7 +258,7 @@ async function loadYahoo(sym){
       const closes=[]; let lastT=0;
       q.forEach((v,i)=>{ if(v!=null){closes.push(v); lastT=ts[i];} });
       if(closes.length<5) throw new Error('vacío');
-      return {closes:closes.slice(-120), stale:(Date.now()/1000-lastT)/60>STALE_MIN};
+      S.src='Yahoo (proxy)'; return {closes:closes.slice(-120), stale:(Date.now()/1000-lastT)/60>STALE_MIN};
     }catch(e){err=e;}
   }
   throw err;
@@ -270,6 +274,7 @@ function demoData(sym){
 async function scan(){
   if(S.scanning) return; S.scanning=true;
   let ok=0;
+  if(!DEMO) S.feed=await fjson(PRICES_URL+'?t='+Math.floor(Date.now()/60000),6000).catch(()=>null);
   await Promise.all(SYMS.map(async s=>{
     try{
       const d = DEMO ? demoData(s) : (A[s].bn ? await loadBinance(s) : await loadYahoo(s));
@@ -474,7 +479,7 @@ const agCls=n=>{ const g=S.ag[n]; let c=g.st; if(n==='Chief'){ c+=' chief'; if(g
 const agPill=n=>{ const g=S.ag[n]; return n==='Chief'&&g.st==='done'?g.t.split(' ')[0]+(g.t.startsWith('NO')?' TRADE':''):PILL[g.st]; };
 const agentCard=n=>`<div class="acard ${agCls(n)}" id="ac-${n}"><div class="ah txt"><span class="ai">${ICON[n]}</span><b>${n}</b><span class="pill" id="pl-${n}">${agPill(n)}</span></div><div class="bar"><i id="fl-${n}" style="width:${S.ag[n].p}%"></i></div><div class="at" id="tx-${n}">${esc(S.ag[n].t)}</div></div>`;
 const levInfo=lv=>`Se liquida con ${(90/lv).toFixed(1)}% en contra · nocional ${money(S.margin*lv,0)}`;
-const nxtTxt=()=>{ if(!S.cfg.auto) return 'Agentes en pausa (AUTO apagado)'; const t=Math.max(0,Math.round((SCAN_MS-(Date.now()-S.lastScan))/1000)); return `🟢 Agentes despiertos · próximo escaneo ${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`; };
+const nxtTxt=()=>{ if(!S.cfg.auto) return 'Agentes en pausa (AUTO apagado)'; const t=Math.max(0,Math.round((SCAN_MS-(Date.now()-S.lastScan))/1000)); return `🟢 Agentes despiertos · próximo escaneo ${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}${S.online&&!DEMO?' · datos: '+(S.src||'Binance'):''}`; };
 function viewMarket(c,r){
   const s=S.sel, a=A[s], px=S.px[s], ch=change(s), cl=S.closes[s]||[], R=rsi(cl);
   c.innerHTML=`<div class="hdr" style="--c1:${a.c[0]};--c2:${a.c[1]}"><div class="dot"></div>
