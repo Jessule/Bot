@@ -190,7 +190,7 @@ const A = {
 const SYMS = Object.keys(A);
 const MAXLEV = 40;
 SYMS.forEach(s=>A[s].max=MAXLEV);
-const THR = {Acción:1.0, Crypto:1.5, Metal:0.8};
+const THR = {Acción:0.6, Crypto:0.5, Metal:0.4}; /* % de movimiento en la ventana del Scout; ajustable con la sensibilidad */
 const START = 10000, FEE = 0.0005, SCAN_MS = 300000, STALE_MIN = 25;
 const AGENTS = [
   ['Scout','#e0212f','Detecta movimientos fuertes'],
@@ -431,7 +431,7 @@ async function runPipeline(sym,exec){
   const d=rep.Chief; let opened=false;
   if(exec && d.action!=='NO TRADE') opened=!!openPos(sym,d.action,d.plan.margin,d.plan.lev,'agentes',d.plan.sl,d.plan.tp);
   S.plan={sym,action:d.action,...d.plan};
-  S.runs.unshift({t:Date.now(),sym,change:ctx.change,price:ctx.price,rep:Object.fromEntries(Object.entries(rep).map(([k,v])=>[k,v.text])),act:d.action,lev:d.lev,margin:d.plan.margin,opened});
+  S.runs.unshift({t:Date.now(),sym,change:ctx.change,price:ctx.price,rep:{Scout:`${sym} ${sgn(ctx.change)}% → pipeline`,...Object.fromEntries(Object.entries(rep).map(([k,v])=>[k,v.text]))},act:d.action,lev:d.lev,margin:d.plan.margin,opened});
   S.runs=S.runs.slice(0,12); store.set('gb.runs',S.runs); S.busy=false; tickAll(); renderMain();
 }
 
@@ -551,7 +551,7 @@ function viewPositions(c,r){
 function viewLog(c,r){
   c.innerHTML=`<div class="hdr"><div class="big txt">Agentes</div></div><div class="sub txt">Historial de decisiones del pipeline</div>
     <div class="cards">${S.runs.length?S.runs.map(x=>`<div class="card"><div class="t txt"><span>${new Date(x.t).toLocaleTimeString()} · ${x.sym} ${sgn(x.change)}%</span>
-      <span class="${x.act==='LONG'?'up':x.act==='SHORT'?'down':'muted'}">${x.act}${x.opened?' ✔':''}</span></div>
+      <span class="${x.act==='LONG'?'up':x.act==='SHORT'?'down':'muted'}">${x.act}${x.opened?' ✔ abierta':x.act!=='NO TRADE'?' (no ejecutada)':''}</span></div>
       ${AGENTS.map(([n,col])=>`<div style="font-size:.85rem"><b style="color:${col}">${n}</b> <span class="muted">${esc(x.rep[n]||'')}</span></div>`).join('')}</div>`).join(''):'<div class="empty">Todavía no se ha ejecutado ningún pipeline.</div>'}</div>`;
   r.innerHTML=`<div class="panel"><div class="head"><h2 class="txt">Equipo</h2><div class="desc">6 agentes en cadena</div></div><div class="body">${AGENTS.map(([n,col,d])=>`<div class="card" style="border-color:${col}"><div class="t txt"><span style="color:${col}">${n}</span></div><div class="muted">${d}</div></div>`).join('')}</div></div>`;
 }
@@ -586,7 +586,7 @@ document.addEventListener('click',e=>{ keepAwake();
   else if(a==='mg'){ S.margin=clamp(S.margin+ +v,10,Math.max(10,Math.floor(S.pf.cash))); renderMain(); }
   else if(a==='mgset'){ S.margin=v==='max'?Math.max(10,Math.floor(S.pf.cash*.98)):Math.min(+v,Math.max(10,Math.floor(S.pf.cash))); renderMain(); }
   else if(a==='open'){ const pl=S.usePlan&&S.plan&&S.plan.sym===S.sel?S.plan:null; if(openPos(S.sel,v,S.margin,clamp(S.lev,1,MAXLEV),pl?'plan agentes':'manual',pl?pl.sl:S.cfg.sl,pl?pl.tp:S.cfg.tp)){ S.usePlan=false; tickAll(); renderMain(); } }
-  else if(a==='run'){ runPipeline(S.sel,false); }
+  else if(a==='run'){ runPipeline(S.sel,S.cfg.exec); }
   else if(a==='auto'){ S.cfg.auto=!S.cfg.auto; saveCfg(); toast(S.cfg.auto?'Auto ON: el Scout escanea cada ~1 min':'Auto OFF'); renderMain(); }
   else if(a==='exec'){ S.cfg.exec=!S.cfg.exec; saveCfg(); renderMain(); }
   else if(a==='scan'){ scan().then(renderMain); renderMain(); }

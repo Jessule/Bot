@@ -1,0 +1,27 @@
+name: pages-sync
+# Copia grok.html a la rama gh-pages (la que sirve GitHub Pages) cada vez que cambia en la rama por defecto
+on:
+  push:
+    branches: [claude/copy-tradingbot-files-rpa16f]
+    paths: [grok.html]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: pages-sync
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: site
+      - uses: actions/checkout@v4
+        with:
+          path: src
+      - run: |
+          cp src/grok.html site/grok.html
+          cd site
+          git config user.name "github-actions" && git config user.email "actions@github.com"
+          git add grok.html
+          git diff --cached --quiet || (git commit -qm "sync grok.html" && git push origin gh-pages)
