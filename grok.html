@@ -84,7 +84,17 @@ b{font-weight:700}
 .bar{height:.55rem;border-radius:.3rem;background:var(--track);overflow:hidden;border:.08rem solid rgba(0,0,0,.5)}
 .bar i{display:block;height:100%;width:0;background:#3d7bff;border-radius:.3rem}
 .running .bar i{background:var(--gold)}.long .bar i{background:var(--up)}.short .bar i{background:var(--down)}
-.at{font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.at{font-size:.8rem;color:var(--muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2}
+/* leverage bar */
+.levbox{display:flex;flex-direction:column;gap:.25rem}
+.levtop{display:flex;justify-content:space-between;align-items:baseline}
+.levv{font-size:2.2rem;font-weight:700;line-height:1}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:1.5rem;background:transparent;touch-action:pan-y;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:.9rem;border-radius:.5rem;border:.12rem solid var(--edge);background:linear-gradient(90deg,#2fd05a 0%,#e8d82a 45%,#ff9a2e 70%,#ff3b4a 100%)}
+input[type=range]::-moz-range-track{height:.9rem;border-radius:.5rem;border:.12rem solid var(--edge);background:linear-gradient(90deg,#2fd05a 0%,#e8d82a 45%,#ff9a2e 70%,#ff3b4a 100%)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:1.9rem;height:1.9rem;margin-top:-.62rem;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#ccc);border:.2rem solid #111;box-shadow:0 .15rem 0 rgba(0,0,0,.6)}
+input[type=range]::-moz-range-thumb{width:1.5rem;height:1.5rem;border-radius:50%;background:#eee;border:.2rem solid #111}
+.levticks{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted)}
 /* panels */
 .panel{background:var(--panel);border:.18rem solid var(--edge);border-radius:.7rem;display:flex;flex-direction:column;min-height:0;flex:1;
   background-image:radial-gradient(var(--dot) 1.6px,transparent 1.8px);background-size:15px 15px;overflow:hidden}
@@ -178,8 +188,10 @@ const A = {
   SILVER:{n:'Plata',cls:'Metal',yf:'SI=F',max:5,c:['#8d96a3','#454b55']},
 };
 const SYMS = Object.keys(A);
+const MAXLEV = 40;
+SYMS.forEach(s=>A[s].max=MAXLEV);
 const THR = {Acción:1.0, Crypto:1.5, Metal:0.8};
-const START = 10000, FEE = 0.0005, SCAN_MS = 60000, STALE_MIN = 25;
+const START = 10000, FEE = 0.0005, SCAN_MS = 300000, STALE_MIN = 25;
 const AGENTS = [
   ['Scout','#e0212f','Detecta movimientos fuertes'],
   ['News','#ff9a2e','Lee titulares'],
@@ -199,12 +211,12 @@ const store = {
 const S = {
   px:{}, closes:{}, stale:{}, sel:'BTC', tab:'market', sub:'open', lev:2, margin:250, pSel:null,
   pf: store.get('gb.pf',{cash:START,pos:[],hist:[],curve:[],log:[]}),
-  cfg: Object.assign({auto:false,thr:1,win:15,risk:5,sl:5,tp:10,exec:true,groq:''}, store.get('gb.cfg',{})),
+  cfg: Object.assign({auto:true,thr:1,win:15,rk:1,sl:5,tp:10,exec:true,groq:''}, store.get('gb.cfg2',{})),
   ag:{}, runs:store.get('gb.runs',[]), cool:{}, hits:[], lastScan:0, busy:false, online:false, scanning:false,
 };
 AGENTS.forEach(([n,,d])=>S.ag[n]={st:'idle',p:0,t:d});
 const save = ()=>{ S.pf.curve=S.pf.curve.slice(-1500); store.set('gb.pf',S.pf); };
-const saveCfg = ()=>store.set('gb.cfg',S.cfg);
+const saveCfg = ()=>store.set('gb.cfg2',S.cfg);
 
 /* ───────────── Helpers ───────────── */
 const $ = s=>document.querySelector(s);
@@ -283,14 +295,14 @@ async function fastTick(){ /* crypto cada 10 s */
 /* ───────────── Paper broker ───────────── */
 const pnlOf=(p,px)=> (p.side==='LONG'?1:-1)*(px/p.entry-1)*p.margin*p.lev;
 const equity=()=> S.pf.cash + S.pf.pos.reduce((a,p)=>a+p.margin+pnlOf(p,S.px[p.sym]??p.entry),0);
-function openPos(sym,side,margin,lev,why='manual'){
+function openPos(sym,side,margin,lev,why='manual',slp=S.cfg.sl,tpp=S.cfg.tp){
   const px=S.px[sym]; if(!px) return toast('Sin precio todavía');
   lev=clamp(lev,1,A[sym].max); const fee=margin*lev*FEE;
   if(margin<=0||margin+fee>S.pf.cash) return toast('Margen insuficiente');
   const d=side==='LONG'?1:-1;
   S.pf.cash-=margin+fee;
   S.pf.pos.push({id:Math.random().toString(36).slice(2,8),sym,side,entry:px,margin,lev,liq:px*(1-d/lev*0.9),
-    sl:px*(1-d*S.cfg.sl/100),tp:px*(1+d*S.cfg.tp/100),t:Date.now(),why});
+    sl:px*(1-d*slp/100),tp:px*(1+d*tpp/100),slp,tpp,t:Date.now(),why});
   S.pf.log.push(`${side} ${sym} x${lev}`); save(); toast(`${side} ${sym} x${lev} abierta`); return true;
 }
 function closePos(id,price,why='manual'){
@@ -333,6 +345,20 @@ async function llm(system,prompt){
     const j=await r.json(); return j.choices?.[0]?.message?.content?.trim()||null;
   }catch(e){ return null; }
 }
+function vol15(sym){ /* volatilidad típica a 15 min, en % */
+  const c=S.closes[sym]||[]; if(c.length<20) return 1;
+  const r=[]; for(let i=1;i<c.length;i++) r.push(Math.log(c[i]/c[i-1]));
+  const m=r.reduce((a,b)=>a+b,0)/r.length, sd=Math.sqrt(r.reduce((a,b)=>a+(b-m)**2,0)/r.length);
+  return sd*Math.sqrt(15)*100;
+}
+/* Tamaño según el activo: SL por volatilidad, leverage por confianza, importe para arriesgar un % fijo del equity */
+function plan(sym,conf,risk){
+  const vol=vol15(sym), sl=clamp(+(vol*3).toFixed(2),0.6,8), tp=+(sl*2).toFixed(2);
+  const lev=clamp(Math.floor(60/sl*(0.35+0.65*conf)*(1-risk*0.5)),1,MAXLEV);
+  const eq=equity(), riskPct=clamp(S.cfg.rk*(0.5+conf),0.25,8);
+  const margin=clamp(eq*riskPct/100/(lev*sl/100),10,Math.max(10,Math.min(eq*0.25,S.pf.cash*0.95)));
+  return {lev,sl,tp,vol,riskPct,margin:Math.round(margin)};
+}
 const A_FN = {
   async News(ctx){
     const hl=await headlines(ctx.sym); if(!hl.length) return {score:0,text:'Sin titulares disponibles'};
@@ -366,10 +392,10 @@ const A_FN = {
     const base=(r.News.score+r.Sentiment.score+r.Charts.score)/3, conf=Math.abs(base);
     let act=base>.2?'LONG':base<-.2?'SHORT':'NO TRADE';
     if(r.Skeptic.risk>.8||conf<.2) act='NO TRADE';
-    const lev=clamp(Math.round(1+conf*(A[ctx.sym].max-1)*1.2),1,A[ctx.sym].max);
+    const pl=plan(ctx.sym,clamp(conf*1.6,0,1),r.Skeptic.risk), lev=pl.lev;
     const t=await llm('Eres el Chief de un fondo de paper trading. Justifica en 1 frase en español la decisión.',
-      `${ctx.sym} ${act} x${lev}, confianza ${(conf*100).toFixed(0)}%. Informes: ${JSON.stringify(Object.fromEntries(Object.entries(r).map(([k,v])=>[k,v.text])))}`);
-    return {action:act,lev,conf,text:`${act}${act!=='NO TRADE'?' x'+lev:''} · ${t||'consenso '+(base>=0?'+':'')+base.toFixed(2)}`};
+      `${ctx.sym} ${act} x${lev}, importe $${pl.margin}, SL ${pl.sl}%, confianza ${(conf*100).toFixed(0)}%, volatilidad 15m ${pl.vol.toFixed(2)}%. Informes: ${JSON.stringify(Object.fromEntries(Object.entries(r).map(([k,v])=>[k,v.text])))}`);
+    return {action:act,lev,conf,plan:pl,text:act==='NO TRADE'?`NO TRADE · ${t||'sin consenso ('+base.toFixed(2)+')'}`:`${act} x${lev} · $${pl.margin} · SL ${pl.sl}% TP ${pl.tp}%${t?' · '+t:''}`};
   },
 };
 function setAg(n,st,p,t){
@@ -392,8 +418,9 @@ async function runPipeline(sym,exec){
     setAg(n,'done',100,rep[n].text);
   }
   const d=rep.Chief; let opened=false;
-  if(exec && d.action!=='NO TRADE') opened=!!openPos(sym,d.action,Math.min(equity()*S.cfg.risk/100,S.pf.cash*.95),d.lev,'agentes');
-  S.runs.unshift({t:Date.now(),sym,change:ctx.change,price:ctx.price,rep:Object.fromEntries(Object.entries(rep).map(([k,v])=>[k,v.text])),act:d.action,lev:d.lev,opened});
+  if(exec && d.action!=='NO TRADE') opened=!!openPos(sym,d.action,d.plan.margin,d.plan.lev,'agentes',d.plan.sl,d.plan.tp);
+  S.plan={sym,action:d.action,...d.plan};
+  S.runs.unshift({t:Date.now(),sym,change:ctx.change,price:ctx.price,rep:Object.fromEntries(Object.entries(rep).map(([k,v])=>[k,v.text])),act:d.action,lev:d.lev,margin:d.plan.margin,opened});
   S.runs=S.runs.slice(0,12); store.set('gb.runs',S.runs); S.busy=false; tickAll(); renderMain();
 }
 
@@ -430,6 +457,7 @@ function renderRail(){
   $('#rail').innerHTML=i('market','<div class="eqball"></div>')+i('positions','✦')+i('agents','📅')+i('settings','⚙️');
 }
 function renderMain(){
+  if(S.drag) return;
   const c=$('#center'), r=$('#right'); const cs=c.scrollTop;
   $('#app').className=(S.tab==='positions'||S.tab==='agents')?'teal':'gray';
   renderRail();
@@ -444,9 +472,10 @@ const PILL={idle:'En espera',running:'Analizando',done:'Listo'};
 const agCls=n=>{ const g=S.ag[n]; let c=g.st; if(n==='Chief'){ c+=' chief'; if(g.st==='done') c+=g.t.startsWith('LONG')?' long':g.t.startsWith('SHORT')?' short':''; } return c; };
 const agPill=n=>{ const g=S.ag[n]; return n==='Chief'&&g.st==='done'?g.t.split(' ')[0]+(g.t.startsWith('NO')?' TRADE':''):PILL[g.st]; };
 const agentCard=n=>`<div class="acard ${agCls(n)}" id="ac-${n}"><div class="ah txt"><span class="ai">${ICON[n]}</span><b>${n}</b><span class="pill" id="pl-${n}">${agPill(n)}</span></div><div class="bar"><i id="fl-${n}" style="width:${S.ag[n].p}%"></i></div><div class="at" id="tx-${n}">${esc(S.ag[n].t)}</div></div>`;
+const levInfo=lv=>`Se liquida con ${(90/lv).toFixed(1)}% en contra · nocional ${money(S.margin*lv,0)}`;
+const nxtTxt=()=>{ if(!S.cfg.auto) return 'Agentes en pausa (AUTO apagado)'; const t=Math.max(0,Math.round((SCAN_MS-(Date.now()-S.lastScan))/1000)); return `🟢 Agentes despiertos · próximo escaneo ${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`; };
 function viewMarket(c,r){
   const s=S.sel, a=A[s], px=S.px[s], ch=change(s), cl=S.closes[s]||[], R=rsi(cl);
-  const nxt=Math.max(0,Math.round((SCAN_MS-(Date.now()-S.lastScan))/1000));
   c.innerHTML=`<div class="hdr" style="--c1:${a.c[0]};--c2:${a.c[1]}"><div class="dot"></div>
     <div class="big txt">${px?'$'+num(px,dec(s,px)):'…'}</div>${sparkSvg(cl.slice(-60),ch>=0?'#3dff6e':'#ff4a5c')}</div>
     <div class="sub txt">${s} · ${a.n} (<span class="${cc(ch)}">${sgn(ch)}%</span> ${S.cfg.win}m ^ RSI ${R.toFixed(0)} = ${R>70?'sobrecompra':R<30?'sobreventa':'zona neutral'})</div>
@@ -454,19 +483,22 @@ function viewMarket(c,r){
       <button class="btn" data-act="run" ${S.busy?'disabled':''}>▶ Lanzar agentes</button>
       <button class="btn${S.cfg.auto?' on':''}" data-act="auto">AUTO ${S.cfg.auto?'ON':'OFF'}</button>
       <button class="btn sm" data-act="scan">🔍 ${S.scanning?'…':'Escanear'}</button></div>
-    <div class="sub" style="font-size:.8rem">${S.cfg.auto?`Próximo escaneo en ~${nxt}s`:'Modo automático apagado'} · ${S.hits.length} movimiento(s) fuerte(s)</div>
+    <div class="sub" style="font-size:.8rem"><span id="nxt">${nxtTxt()}</span> · ${S.hits.length} movimiento(s) fuerte(s)</div>
     <div class="agrid">${AGENTS.map(([n])=>agentCard(n)).join('')}</div>`;
   const pos=S.pf.pos.filter(p=>p.sym===s).length, last=S.runs.find(x=>x.sym===s);
-  const max=a.max; const lv=Math.min(S.lev,max);
-  const tiles=[]; for(let i=1;i<=10;i++) tiles.push(`<div class="tile${i>max?' lock':''}${i===lv?' sel':''}" ${i<=max?`data-act="lev" data-v="${i}"`:''}><i>[x${i}]</i>${i>max?'✖':i+'x'}</div>`);
+  const lv=clamp(S.lev,1,MAXLEV), pl=S.plan&&S.plan.sym===s&&S.plan.action!=='NO TRADE'?S.plan:null;
   r.innerHTML=`<div class="panel"><div class="head"><h2 class="txt">${a.n}</h2>
     <div class="desc">${last?'Chief: '+esc(last.act)+(last.act!=='NO TRADE'?' x'+last.lev:''):'Sin decisión de agentes todavía'}</div>
     <div class="status txt"><span>Posiciones</span><span class="tag${pos?'':' no'}">${pos?pos+' abierta'+(pos>1?'s':''):'Libre'}</span></div></div>
-    <div class="body"><div class="desc" style="text-align:center">Leverage (máx ${max}x)</div><div class="tiles">${tiles.slice(0,max>5?10:max>1?5:1).join('')}</div>
+    <div class="body"><div class="levbox"><div class="levtop"><span class="desc">Leverage</span><span class="levv txt">x<span id="levv">${lv}</span></span></div>
+    <input type="range" id="lev" min="1" max="${MAXLEV}" step="1" value="${lv}">
+    <div class="levticks"><span>x1</span><span>x10</span><span>x20</span><span>x30</span><span>x40</span></div>
+    <div class="desc" id="levinfo" style="text-align:center">${levInfo(lv)}</div></div>
+    ${pl?`<button class="btn sm" data-act="useplan">🤖 Usar plan de los agentes: ${pl.action} x${pl.lev} · $${pl.margin}</button>`:''}
     <div class="desc" style="text-align:center">Margen</div>
     <div class="stepper"><button class="btn sm" data-act="mg" data-v="-50">−</button><span class="txt">${money(S.margin,0)}</span><button class="btn sm" data-act="mg" data-v="50">+</button></div>
     <div class="chips">${[100,250,500,1000].map(v=>`<button class="btn sm" data-act="mgset" data-v="${v}">${v}</button>`).join('')}<button class="btn sm" data-act="mgset" data-v="max">MAX</button></div>
-    <div class="desc" style="text-align:center">Nocional ${money(S.margin*lv,0)} · SL ${S.cfg.sl}% · TP ${S.cfg.tp}%</div></div>
+    </div>
     <div style="padding:.5rem .8rem;display:flex;gap:.5rem"><button class="btn buy big" data-act="open" data-v="LONG">LONG</button><button class="btn sell big" data-act="open" data-v="SHORT">SHORT</button></div></div>`;
 }
 function viewPositions(c,r){
@@ -519,7 +551,7 @@ function viewSettings(c,r){
     <div class="field"><span>Modo automático</span><button class="btn${C.auto?' on':''}" data-act="auto">${C.auto?'ON':'OFF'}</button></div>
     <div class="field"><span>Los agentes abren operaciones</span><button class="btn${C.exec?' on':''}" data-act="exec">${C.exec?'SÍ':'NO'}</button></div>
     ${sl('win','Ventana Scout (min)',C.win,5,60,5)}${sl('thr','Sensibilidad (× umbral)',C.thr,.5,3,.25,x=>x.toFixed(2))}
-    ${sl('risk','Margen por operación auto (% equity)',C.risk,1,20,1,x=>x+'%')}${sl('sl','Stop-loss %',C.sl,1,20,1)}${sl('tp','Take-profit %',C.tp,1,40,1)}
+    ${sl('rk','Riesgo por operación de los agentes (% equity)',C.rk,0.5,5,0.5,x=>x+'%')}<div class="desc">Los agentes eligen leverage, importe, SL y TP según volatilidad y confianza. Manual: </div>${sl('sl','Stop-loss manual %',C.sl,1,20,1)}${sl('tp','Take-profit manual %',C.tp,1,40,1)}
     </div></div>`;
   r.innerHTML=`<div class="panel"><div class="head"><h2 class="txt">Cuenta</h2><div class="desc">Paper trading · $${START.toLocaleString()} virtuales</div></div><div class="body">
     <div class="desc">Opcional: clave gratuita de Groq para que Skeptic y Chief redacten con llama (se guarda solo en este móvil).</div>
@@ -532,14 +564,17 @@ function tickAll(){ renderTop(); renderLeft(); if(!S.busy && (S.tab==='market'||
 
 /* ───────────── Eventos ───────────── */
 let resetArm=0;
-document.addEventListener('click',e=>{
+document.addEventListener('input',e=>{ if(e.target.id==='lev'){ S.lev=+e.target.value; S.usePlan=false; $('#levv').textContent=S.lev; $('#levinfo').textContent=levInfo(S.lev); } });
+document.addEventListener('pointerdown',e=>{ if(e.target.id==='lev') S.drag=true; });
+['pointerup','pointercancel','touchend'].forEach(ev=>document.addEventListener(ev,()=>{ S.drag=false; }));
+document.addEventListener('click',e=>{ keepAwake();
   const t=e.target.closest('[data-act]'); if(!t) return; const a=t.dataset.act, v=t.dataset.v;
   if(a==='sel'){ S.sel=v; if(S.tab!=='market') S.tab='market'; renderLeft(); renderMain(); }
   else if(a==='tab'){ S.tab=v; renderMain(); }
-  else if(a==='lev'){ S.lev=+v; renderMain(); }
+  else if(a==='useplan'){ S.lev=S.plan.lev; S.margin=clamp(S.plan.margin,10,Math.max(10,Math.floor(S.pf.cash))); S.usePlan=true; renderMain(); }
   else if(a==='mg'){ S.margin=clamp(S.margin+ +v,10,Math.max(10,Math.floor(S.pf.cash))); renderMain(); }
   else if(a==='mgset'){ S.margin=v==='max'?Math.max(10,Math.floor(S.pf.cash*.98)):Math.min(+v,Math.max(10,Math.floor(S.pf.cash))); renderMain(); }
-  else if(a==='open'){ if(openPos(S.sel,v,S.margin,Math.min(S.lev,A[S.sel].max))){ tickAll(); renderMain(); } }
+  else if(a==='open'){ const pl=S.usePlan&&S.plan&&S.plan.sym===S.sel?S.plan:null; if(openPos(S.sel,v,S.margin,clamp(S.lev,1,MAXLEV),pl?'plan agentes':'manual',pl?pl.sl:S.cfg.sl,pl?pl.tp:S.cfg.tp)){ S.usePlan=false; tickAll(); renderMain(); } }
   else if(a==='run'){ runPipeline(S.sel,false); }
   else if(a==='auto'){ S.cfg.auto=!S.cfg.auto; saveCfg(); toast(S.cfg.auto?'Auto ON: el Scout escanea cada ~1 min':'Auto OFF'); renderMain(); }
   else if(a==='exec'){ S.cfg.exec=!S.cfg.exec; saveCfg(); renderMain(); }
@@ -553,10 +588,18 @@ document.addEventListener('click',e=>{
 });
 
 /* ───────────── Arranque ───────────── */
-renderTop(); renderLeft(); renderMain();
+let wl=null;
+async function keepAwake(){ try{ if(S.cfg.auto&&'wakeLock' in navigator&&!wl){ wl=await navigator.wakeLock.request('screen'); wl.addEventListener('release',()=>{wl=null;}); } }catch(e){} }
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ keepAwake(); if(!S.scanning&&Date.now()-S.lastScan>=SCAN_MS) scan(); } });
+renderTop(); renderLeft(); renderMain(); keepAwake();
 scan().then(()=>renderMain());
 setInterval(()=>{ if(!S.scanning && Date.now()-S.lastScan>=SCAN_MS) scan(); },3000);
 setInterval(fastTick,10000);
+setInterval(()=>{ const e=$('#nxt'); if(e) e.textContent=nxtTxt(); },1000);
+setInterval(async()=>{ /* refresca cada minuto las acciones/metales con posición abierta, para SL/TP */
+  if(DEMO) return;
+  for(const s of new Set(S.pf.pos.map(p=>p.sym))) if(!A[s].bn){ try{ const d=await loadYahoo(s); S.closes[s]=d.closes; S.stale[s]=d.stale; S.px[s]=d.closes[d.closes.length-1]; }catch(e){} }
+  riskCheck(); tickAll(); },60000);
 setInterval(()=>{ if(S.tab==='market'&&!S.busy) renderMain(); },1000*15);
 </script>
 </body>
