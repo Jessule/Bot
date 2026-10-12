@@ -27,11 +27,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .txt{text-shadow:0 .1em 0 rgba(0,0,0,.55),0 0 .2em rgba(0,0,0,.4)}
 b{font-weight:700}
 /* top strip */
-#top{flex:none;background:rgba(20,20,22,.78);border-bottom:.2rem solid var(--edge);min-height:3.4rem;
+#top{flex:none;background:rgba(20,20,22,.78);border-bottom:.2rem solid var(--edge);min-height:3.6rem;
   display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.3rem 1rem;flex-wrap:wrap;
-  font-size:1.9rem;font-weight:700;line-height:1.05;white-space:nowrap;overflow:hidden}
-#top .x{color:#777;font-size:1.5rem}
-#top small{font-size:.75rem;color:var(--muted);font-weight:500;margin-left:.1rem}
+  font-weight:700;line-height:1.05;white-space:nowrap;overflow:hidden}
+.stat{display:flex;flex-direction:column;align-items:center;min-width:5.5rem;padding:0 .9rem;border-left:.12rem solid rgba(255,255,255,.12)}
+.stat:first-child{border-left:0}
+.stat span{font-size:.7rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.stat b{font-size:1.45rem}
 .teal #top{background:rgba(6,38,48,.85)}
 #banner{flex:none;text-align:center;font-size:.8rem;font-weight:600;padding:.15rem;background:#6b1d1d;display:none}
 #banner.on{display:block}
@@ -71,15 +73,18 @@ b{font-weight:700}
 .dot{width:2.4rem;height:2.4rem;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,var(--c1) 55%,var(--c2));
   border:.15rem solid rgba(0,0,0,.6);flex:none}
 .sub{text-align:center;color:var(--muted);font-size:1rem}
-/* agent lines */
-.lines{display:flex;flex-direction:column;gap:.2rem}
-.ag{display:flex;flex-direction:column}
-.ag .lab{display:flex;justify-content:space-between;font-size:.85rem;gap:.6rem}
-.ag .lab span:last-child{color:var(--muted);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.ag svg{width:100%;height:1.15rem;display:block}
-.ag path{fill:none;stroke-width:7;stroke-linecap:round}
-.ag .tr{stroke:var(--track)}
-.ag .fl{stroke-dasharray:100 100;stroke-linecap:butt}
+/* agent cards */
+.agrid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.acard{background:rgba(0,0,0,.32);border:.15rem solid var(--edge);border-bottom-width:.3rem;border-radius:.6rem;padding:.4rem .6rem;display:flex;flex-direction:column;gap:.25rem;min-width:0}
+.acard.running{border-color:var(--gold)}.acard.done{border-color:#3d7bff}
+.acard.long{border-color:var(--up)}.acard.short{border-color:var(--down)}
+.ah{display:flex;align-items:center;gap:.4rem;font-size:1rem}.ai{font-size:1.25rem;line-height:1}
+.pill{margin-left:auto;font-size:.62rem;font-weight:600;padding:.05rem .4rem;border-radius:.3rem;background:#444;color:#ddd}
+.running .pill{background:#7a5d00;color:var(--gold)}.done .pill{background:#14407f;color:#bcd4ff}.long .pill{background:#0f5a22;color:var(--up)}.short .pill{background:#6e0d16;color:var(--down)}
+.bar{height:.55rem;border-radius:.3rem;background:var(--track);overflow:hidden;border:.08rem solid rgba(0,0,0,.5)}
+.bar i{display:block;height:100%;width:0;background:#3d7bff;border-radius:.3rem}
+.running .bar i{background:var(--gold)}.long .bar i{background:var(--up)}.short .bar i{background:var(--down)}
+.at{font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* panels */
 .panel{background:var(--panel);border:.18rem solid var(--edge);border-radius:.7rem;display:flex;flex-direction:column;min-height:0;flex:1;
   background-image:radial-gradient(var(--dot) 1.6px,transparent 1.8px);background-size:15px 15px;overflow:hidden}
@@ -369,9 +374,11 @@ const A_FN = {
 };
 function setAg(n,st,p,t){
   Object.assign(S.ag[n],{st,p,t});
-  const path=$('#fl-'+n), tx=$('#tx-'+n);
-  if(path){ path.style.transition=st==='running'?'stroke-dashoffset 1.6s linear':'stroke-dashoffset .3s'; path.style.strokeDashoffset=100-p; }
+  const bar=$('#fl-'+n), tx=$('#tx-'+n), card=$('#ac-'+n), pl=$('#pl-'+n);
+  if(bar){ bar.style.transition=st==='running'?'width 1.6s linear':'width .3s'; bar.style.width=p+'%'; }
   if(tx) tx.textContent=t;
+  if(card) card.className='acard '+agCls(n);
+  if(pl) pl.textContent=agPill(n);
 }
 async function runPipeline(sym,exec){
   if(S.busy) return; S.busy=true; S.cool[sym]=Date.now();
@@ -396,16 +403,11 @@ const sparkSvg=(c,col,w=110,h=34)=>{
   const pts=c.map((v,i)=>`${(i*w/(c.length-1)).toFixed(1)},${(h-2-(v-lo)/r*(h-4)).toFixed(1)}`).join(' ');
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 };
-const WAVES=['M0,10 C40,2 80,18 120,10 S200,2 240,10 S320,18 360,10 S440,2 480,10 S560,18 600,10',
-  'M0,10 C50,16 90,3 140,10 S230,17 280,9 S370,3 420,11 S520,17 600,9',
-  'M0,9 C30,3 70,16 110,10 S190,4 250,11 S340,16 400,8 S510,4 600,10'];
-const wave=(id,col,p,w,anim)=>`<svg viewBox="0 0 600 20" preserveAspectRatio="none"><path class="tr" d="${WAVES[w%3]}"/><path class="fl" id="${id}" pathLength="100" stroke="${col}" style="stroke-dashoffset:${100-p}${anim||''}" d="${WAVES[w%3]}"/></svg>`;
-
 function renderTop(){
   const eq=equity(), tot=eq-START, pct=tot/START*100;
   const used=S.pf.pos.reduce((a,p)=>a+p.margin,0);
-  const x='<span class="x">×</span>';
-  $('#top').innerHTML=`<span class="txt">${money(eq)}</span>${x}<span class="${cc(tot)} txt">${sgn(pct)}%</span>${x}<span class="cyan txt">${money(S.pf.cash,0)}<small>cash</small></span>${x}<span class="gold txt">${money(used,0)}<small>margen</small></span>${x}<span class="orange txt">${S.pf.pos.length}<small>pos</small></span>`;
+  const st=(l,v,c='')=>`<div class="stat"><span>${l}</span><b class="txt ${c}">${v}</b></div>`;
+  $('#top').innerHTML=st('Equity',money(eq))+st('Ganancia',`${sgn(tot)} (${sgn(pct)}%)`,cc(tot))+st('Efectivo',money(S.pf.cash,0))+st('En margen',money(used,0))+st('Posiciones',S.pf.pos.length);
   const b=$('#banner');
   if(DEMO){ b.textContent='MODO DEMO · precios simulados, no reales'; b.classList.add('on'); }
   else if(!S.online && S.lastScan){ b.textContent='Sin datos de mercado (red/proxy). Reintentando…'; b.classList.add('on'); }
@@ -416,9 +418,10 @@ function renderLeft(){
   const order=[...SYMS].sort((a,b)=>Math.abs(change(b))-Math.abs(change(a)));
   el.innerHTML=order.map(s=>{
     const a=A[s], px=S.px[s], ch=change(s), hot=S.hits.includes(s);
-    return `<div class="row${S.sel===s?' sel':''}${hot?' hot':''}" data-act="sel" data-v="${s}" style="--c1:${a.c[0]};--c2:${a.c[1]}">
+    const tint=!px||S.stale[s]?['#3b3f4a','#22252c']:ch>=0?['#17803a','#0b3d1b']:['#a3202d','#4d0b13'];
+    return `<div class="row${S.sel===s?' sel':''}${hot?' hot':''}" data-act="sel" data-v="${s}" style="--c1:${tint[0]};--c2:${tint[1]}">
       <div class="l1 txt"><span>${s}${hot?'<span class="badge">🔥 FUERTE</span>':''}${S.stale[s]?'<span class="badge">cerrado</span>':''}</span><span>${px?'$'+num(px,dec(s,px)):'…'}</span></div>
-      <div class="l2 txt"><span>${a.cls} · máx ${a.max}x</span><span class="chg ${px?cc(ch):''}">${px?sgn(ch)+'%':''}</span></div></div>`;
+      <div class="l2 txt"><span>${a.cls} · máx ${a.max}x</span><span class="chg">${px?sgn(ch)+'%':''}</span></div></div>`;
   }).join('');
   el.scrollTop=st; el.scrollLeft=sl;
 }
@@ -436,6 +439,11 @@ function renderMain(){
   else viewSettings(c,r);
   c.scrollTop=cs;
 }
+const ICON={Scout:'🔭',News:'📰',Sentiment:'🧠',Charts:'📈',Skeptic:'🛡️',Chief:'👔'};
+const PILL={idle:'En espera',running:'Analizando',done:'Listo'};
+const agCls=n=>{ const g=S.ag[n]; let c=g.st; if(n==='Chief'){ c+=' chief'; if(g.st==='done') c+=g.t.startsWith('LONG')?' long':g.t.startsWith('SHORT')?' short':''; } return c; };
+const agPill=n=>{ const g=S.ag[n]; return n==='Chief'&&g.st==='done'?g.t.split(' ')[0]+(g.t.startsWith('NO')?' TRADE':''):PILL[g.st]; };
+const agentCard=n=>`<div class="acard ${agCls(n)}" id="ac-${n}"><div class="ah txt"><span class="ai">${ICON[n]}</span><b>${n}</b><span class="pill" id="pl-${n}">${agPill(n)}</span></div><div class="bar"><i id="fl-${n}" style="width:${S.ag[n].p}%"></i></div><div class="at" id="tx-${n}">${esc(S.ag[n].t)}</div></div>`;
 function viewMarket(c,r){
   const s=S.sel, a=A[s], px=S.px[s], ch=change(s), cl=S.closes[s]||[], R=rsi(cl);
   const nxt=Math.max(0,Math.round((SCAN_MS-(Date.now()-S.lastScan))/1000));
@@ -447,7 +455,7 @@ function viewMarket(c,r){
       <button class="btn${S.cfg.auto?' on':''}" data-act="auto">AUTO ${S.cfg.auto?'ON':'OFF'}</button>
       <button class="btn sm" data-act="scan">🔍 ${S.scanning?'…':'Escanear'}</button></div>
     <div class="sub" style="font-size:.8rem">${S.cfg.auto?`Próximo escaneo en ~${nxt}s`:'Modo automático apagado'} · ${S.hits.length} movimiento(s) fuerte(s)</div>
-    <div class="lines">${AGENTS.map(([n,col],i)=>`<div class="ag"><div class="lab txt"><span>${n}</span><span id="tx-${n}">${esc(S.ag[n].t)}</span></div>${wave('fl-'+n,col,S.ag[n].p,i)}</div>`).join('')}</div>`;
+    <div class="agrid">${AGENTS.map(([n])=>agentCard(n)).join('')}</div>`;
   const pos=S.pf.pos.filter(p=>p.sym===s).length, last=S.runs.find(x=>x.sym===s);
   const max=a.max; const lv=Math.min(S.lev,max);
   const tiles=[]; for(let i=1;i<=10;i++) tiles.push(`<div class="tile${i>max?' lock':''}${i===lv?' sel':''}" ${i<=max?`data-act="lev" data-v="${i}"`:''}><i>[x${i}]</i>${i>max?'✖':i+'x'}</div>`);
@@ -471,7 +479,7 @@ function viewPositions(c,r){
       const col=win?'#38d84a':'#ff4a5c';
       return `<div class="prow${S.pSel===p.id?' sel':''}" data-act="psel" data-v="${p.id}">
         <div class="ring"><span class="txt">${p.lev}x</span><small>${p.side}</small></div>
-        <div class="mid"><div class="l txt"><span><b>${p.sym}</b> ${money(p.margin,0)}</span><span class="muted">liq ${num(p.liq,dec(p.sym,p.liq))}</span></div>${wave('pw'+p.id,col,clamp(prog*100,3,100),p.id.charCodeAt(0))}</div>
+        <div class="mid"><div class="l txt"><span><b>${p.sym}</b> ${money(p.margin,0)}</span><span class="muted">liq ${num(p.liq,dec(p.sym,p.liq))}</span></div><div class="bar"><i style="width:${clamp(prog*100,4,100)}%;background:${col}"></i></div></div>
         <div class="end txt ${cc(pn)}">${sgn(pn)}<small>${sgn(pn/p.margin*100,1)}%</small></div></div>`;
     }).join(''):'<div class="empty">Sin posiciones abiertas.<br>Abre una desde el mercado o deja que los agentes operen.</div>';
   } else if(S.sub==='hist'){
