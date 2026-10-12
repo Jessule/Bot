@@ -6,10 +6,10 @@
 <meta name="theme-color" content="#2a2a2d">
 <title>Grok Bot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --font:'Fredoka',ui-rounded,'Trebuchet MS',system-ui,sans-serif;
+  --font:'Quicksand',ui-rounded,'Trebuchet MS',system-ui,sans-serif;
   --bg:#2a2a2d; --dot:rgba(255,255,255,.07); --panel:#4a4a4e; --panel-d:#38383c; --edge:#17171a;
   --btn:#3b4060; --btn-edge:#1c2036; --text:#fff; --muted:#b9bcc8;
   --up:#3dff6e; --down:#ff4a5c; --gold:#ffd93a; --cyan:#37f0d4; --orange:#ff9a2e; --blue:#4d8dff; --track:#0c3a4c;
@@ -19,7 +19,7 @@
   --btn:#0b57b8; --btn-edge:#08336f; --track:#082f3d; }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html{font-size:clamp(11px,2.35vh,17px)}
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-weight:500;
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-weight:600;
   -webkit-user-select:none;user-select:none}
 #app{height:100%;display:flex;flex-direction:column;background:var(--bg);
   background-image:radial-gradient(var(--dot) 1.6px,transparent 1.8px);background-size:15px 15px;
@@ -51,12 +51,12 @@ b{font-weight:700}
 .row.sel{outline:.18rem solid #fff;outline-offset:-.1rem}
 .row.hot{animation:pulse 1s infinite}
 @keyframes pulse{50%{box-shadow:inset 0 .12rem 0 rgba(255,255,255,.22),0 0 .9rem var(--gold)}}
-.row .l1{white-space:nowrap;display:flex;justify-content:space-between;align-items:baseline;gap:.4rem;font-size:1.1rem;font-weight:600}
+.row .l1{white-space:nowrap;display:flex;justify-content:space-between;align-items:baseline;gap:.4rem;font-size:1.1rem;font-weight:700}
 .row .l2{display:flex;justify-content:space-between;font-size:.82rem;opacity:.92}
 .chg{font-weight:700}.up{color:var(--up)}.down{color:var(--down)}.gold{color:var(--gold)}.cyan{color:var(--cyan)}.orange{color:var(--orange)}.blue{color:var(--blue)}.muted{color:var(--muted)}
 .badge{font-size:.62rem;background:rgba(0,0,0,.45);border-radius:.3rem;padding:.05rem .3rem;margin-left:.25rem;vertical-align:middle}
 /* buttons */
-.btn{font-family:var(--font);font-weight:600;font-size:1rem;color:#fff;background:var(--btn);border:.15rem solid var(--btn-edge);
+.btn{font-family:var(--font);font-weight:700;font-size:1rem;color:#fff;background:var(--btn);border:.15rem solid var(--btn-edge);
   border-bottom-width:.38rem;border-radius:.6rem;padding:.35rem .9rem;cursor:pointer;text-shadow:0 .1em 0 rgba(0,0,0,.5);
   box-shadow:inset 0 .1rem 0 rgba(255,255,255,.18)}
 .btn:active{transform:translateY(.15rem);border-bottom-width:.23rem}
@@ -89,7 +89,7 @@ b{font-weight:700}
 .panel{background:var(--panel);border:.18rem solid var(--edge);border-radius:.7rem;display:flex;flex-direction:column;min-height:0;flex:1;
   background-image:radial-gradient(var(--dot) 1.6px,transparent 1.8px);background-size:15px 15px;overflow:hidden}
 .panel .head{padding:.6rem .8rem .4rem;background:var(--panel-d);border-bottom:.15rem solid var(--edge)}
-.panel h2{font-size:1.9rem;font-weight:600;line-height:1.05}
+.panel h2{font-size:1.9rem;font-weight:700;line-height:1.05}
 .panel .desc{color:var(--muted);font-size:.95rem}
 .panel .body{flex:1;overflow-y:auto;padding:.6rem .8rem;display:flex;flex-direction:column;gap:.55rem}
 .status{display:flex;justify-content:space-between;align-items:center;margin-top:.35rem;font-size:1rem}
