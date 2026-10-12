@@ -285,8 +285,13 @@ async function scan(){
   S.hits = SYMS.filter(s=>S.closes[s]&&!S.stale[s]&&Math.abs(change(s))>=THR[A[s].cls]*S.cfg.thr);
   riskCheck(); tickAll();
   if(S.cfg.auto && !S.busy){
-    const h=S.hits.filter(s=>Date.now()-(S.cool[s]||0)>600000).sort((a,b)=>Math.abs(change(b))-Math.abs(change(a)))[0];
-    if(h){ S.sel=h; await runPipeline(h,S.cfg.exec); }
+    /* todos los movimientos fuertes, del mayor al menor; varias posiciones a la vez mientras quede efectivo */
+    const todo=S.hits.filter(s=>Date.now()-(S.cool[s]||0)>600000).sort((a,b)=>Math.abs(change(b))-Math.abs(change(a)));
+    if(todo.length) S.sel=todo[0];
+    for(const h of todo){
+      if(S.cfg.exec && S.pf.cash<20){ toast('Sin efectivo para más posiciones'); break; }
+      await runPipeline(h,S.cfg.exec);
+    }
   }
 }
 async function fastTick(){ /* crypto cada 10 s */
