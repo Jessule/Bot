@@ -201,7 +201,8 @@ const AGENTS = [
   ['Chief','#3d7bff','Decide LONG / SHORT'],
 ];
 const PROXIES = [u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`, u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`];
-const DEMO = new URLSearchParams(location.search).has('demo');
+/* demo = precios simulados: con ?demo=1 o dentro de un visor sin red (claude.ai) */
+const DEMO = new URLSearchParams(location.search).has('demo') || !!(window.claude && window.claude.use);
 const store = {
   get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v);}catch(e){return d;} },
   set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} },
