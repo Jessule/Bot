@@ -34,10 +34,15 @@ Los precios los pide el propio navegador del móvil (Binance para crypto; Yahoo 
 `grok.html` las lee de ahí (sin proxies ni claves) y usa los proxies solo como respaldo. Crypto va directo a Binance.
 Los workflows programados solo corren desde la rama por defecto: haz merge a `main`, luego Actions → prices → Run workflow, y activa Pages.
 
-## 💻 Versión para portátil (misma interfaz que el móvil)
-Sirve `grok.html` en tu propio equipo y baja los precios reales de Yahoo directamente desde tu portátil (sin proxies ni claves).
-1. Instala Python 3 si no lo tienes (https://www.python.org/downloads/, en Windows marca "Add Python to PATH").
-2. Descarga el repo (botón verde *Code* → *Download ZIP*) y descomprímelo.
-3. Windows: doble clic en `laptop/iniciar.bat`. Mac/Linux: `bash laptop/iniciar.sh`.
-4. Se abre `http://localhost:8765`. Deja la ventana negra abierta y la pestaña del navegador abierta: los agentes escanean cada 5 min.
+## 💻 Portátil: la forma más fácil (sin instalar nada)
+1. Abre https://jessule.github.io/Bot/grok.html en Chrome o Edge.
+2. Pulsa el icono de **Instalar** (aparece a la derecha de la barra de direcciones, o menú ⋮ → *Instalar Grok Bot* / *Guardar y compartir → Instalar como app*).
+3. Ya tienes el icono "Grok Bot" en el escritorio / menú inicio: se abre como un programa, sin barra del navegador.
+Los precios reales llegan por el robot de GitHub cada 5 min. Deja la app abierta para que los agentes sigan trabajando.
+
+### Alternativa: servidor local con precios cada minuto
+Sirve `grok.html` en tu propio equipo y baja Yahoo directamente desde tu portátil (sin proxies ni claves).
+1. Instala Python 3 (https://www.python.org/downloads/, en Windows marca "Add Python to PATH").
+2. Descarga el repo (*Code → Download ZIP*) y descomprímelo.
+3. Windows: doble clic en `laptop/iniciar.bat`. Mac/Linux: `bash laptop/iniciar.sh`. Se abre `http://localhost:8765`.
 Para que no se duerma el portátil: Configuración → Energía → "Nunca suspender" mientras esté enchufado.
