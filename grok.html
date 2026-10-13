@@ -206,7 +206,9 @@ const AGENTS = [
   ['Chief','#3d7bff','Decide LONG / SHORT'],
 ];
 /* Feed de Yahoo que publica el workflow prices.yml cada 5 min (raw.githubusercontent.com permite CORS) */
-const PRICES_URL = 'https://raw.githubusercontent.com/Jessule/Bot/prices/prices.json';
+/* en el portátil (laptop/serve.py) el feed sale de tu propio equipo; en la web, de la rama prices */
+const LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && location.protocol.startsWith('http');
+const PRICES_URL = LOCAL ? '/prices.json' : 'https://raw.githubusercontent.com/Jessule/Bot/prices/prices.json';
 const PROXIES = [u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`, u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`];
 /* demo = precios simulados: con ?demo=1 o dentro de un visor sin red (claude.ai) */
 const DEMO = new URLSearchParams(location.search).has('demo') || !!(window.claude && window.claude.use);
@@ -282,7 +284,7 @@ async function scan(){
   if(!DEMO) S.feed=await fjson(PRICES_URL+'?t='+Math.floor(Date.now()/60000),6000).catch(()=>null);
   await Promise.all(SYMS.map(async s=>{
     try{
-      const d = DEMO ? demoData(s) : (A[s].bn ? await loadBinance(s) : await loadYahoo(s));
+      const d = DEMO ? demoData(s) : (A[s].bn ? await loadBinance(s).catch(()=>loadYahoo(s)) : await loadYahoo(s));
       S.closes[s]=d.closes; S.stale[s]=d.stale; S.px[s]=d.closes[d.closes.length-1]; ok++;
     }catch(e){ /* mantiene el último dato */ }
   }));
