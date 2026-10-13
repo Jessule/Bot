@@ -1,9 +1,9 @@
 name: pages-sync
-# Copia grok.html a la rama gh-pages (la que sirve GitHub Pages) cada vez que cambia en la rama por defecto
+# Copia grok.html (y los archivos de la app instalable) a la rama gh-pages (la que sirve GitHub Pages) cada vez que cambia en la rama por defecto
 on:
   push:
     branches: [claude/copy-tradingbot-files-rpa16f]
-    paths: [grok.html]
+    paths: [grok.html, manifest.webmanifest, sw.js, icon-192.png, icon-512.png]
   workflow_dispatch:
 permissions:
   contents: write
@@ -20,8 +20,8 @@ jobs:
         with:
           path: src
       - run: |
-          cp src/grok.html site/grok.html
+          cp src/grok.html src/manifest.webmanifest src/sw.js src/icon-192.png src/icon-512.png site/
           cd site
           git config user.name "github-actions" && git config user.email "actions@github.com"
-          git add grok.html
+          git add grok.html manifest.webmanifest sw.js icon-192.png icon-512.png
           git diff --cached --quiet || (git commit -qm "sync grok.html" && git push origin gh-pages)

@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#2a2a2d">
 <title>Grok Bot</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -632,6 +634,7 @@ document.addEventListener('click',e=>{ keepAwake();
 let wl=null;
 async function keepAwake(){ try{ if(S.cfg.auto&&'wakeLock' in navigator&&!wl){ wl=await navigator.wakeLock.request('screen'); wl.addEventListener('release',()=>{wl=null;}); } }catch(e){} }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ keepAwake(); if(!S.scanning&&Date.now()-S.lastScan>=SCAN_MS) scan(); } });
+if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{}); /* hace la página instalable como app */
 renderTop(); renderLeft(); renderMain(); keepAwake();
 scan().then(()=>renderMain());
 setInterval(()=>{ if(!S.scanning && Date.now()-S.lastScan>=SCAN_MS) scan(); },3000);
