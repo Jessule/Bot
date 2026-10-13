@@ -223,8 +223,8 @@ const store = {
 const S = {
   px:{}, closes:{}, stale:{}, sel:'BTC', tab:'market', sub:'open', lev:2, margin:250, pSel:null,
   pf: store.get('gb.pf',{cash:START,pos:[],hist:[],curve:[],log:[]}),
-  cfg: Object.assign({auto:true,thr:1,win:15,rk:1,sl:5,tp:10,exec:true,groq:''}, store.get('gb.cfg2',{})),
-  ag:{}, runs:store.get('gb.runs',[]), cool:{}, hits:[], lastScan:0, busy:false, online:false, scanning:false,
+  cfg: Object.assign({auto:true,thr:1,win:15,rk:1,sl:5,tp:10,exec:true,groq:'',helper:false}, store.get('gb.cfg2',{})),
+  ag:{}, runs:store.get('gb.runs',[]), cool:{}, hits:[], lastScan:0, busy:false, online:false, scanning:false, old:{},
 };
 AGENTS.forEach(([n,,d])=>S.ag[n]={st:'idle',p:0,t:d});
 const save = ()=>{ S.pf.curve=S.pf.curve.slice(-1500); store.set('gb.pf',S.pf); };
@@ -255,9 +255,11 @@ async function loadBinance(sym){
   const k=await fjson(`https://api.binance.com/api/v3/klines?symbol=${A[sym].bn}&interval=1m&limit=120`);
   return {closes:k.map(x=>+x[4]), stale:false};
 }
+const feedAgeMin=()=>S.feed?(Date.now()/1000-S.feed.updated)/60:Infinity;
 async function loadYahoo(sym){
   const f=S.feed&&S.feed.data&&S.feed.data[sym];
-  if(f&&Date.now()/1000-S.feed.updated<1500){ S.src='Yahoo'; return {closes:f.closes, stale:(Date.now()/1000-f.last_ts)/60>STALE_MIN}; }
+  const fresh=feedAgeMin()<25;
+  if(f&&fresh){ S.src=S.feedFrom==='local'?'Yahoo en directo (portátil)':'Yahoo'; return {closes:f.closes, stale:(Date.now()/1000-f.last_ts)/60>STALE_MIN}; }
   const u=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(A[sym].yf)}?interval=1m&range=1d`;
   let err;
   for(const p of PROXIES){
@@ -270,6 +272,8 @@ async function loadYahoo(sym){
       S.src='Yahoo (proxy)'; return {closes:closes.slice(-120), stale:(Date.now()/1000-lastT)/60>STALE_MIN};
     }catch(e){err=e;}
   }
+  /* último recurso: el feed viejo, para al menos mostrar el último precio conocido (nunca se opera con él) */
+  if(f){ S.src='Yahoo (desfasado)'; return {closes:f.closes, stale:true, old:true}; }
   throw err;
 }
 function demoData(sym){
@@ -283,11 +287,18 @@ function demoData(sym){
 async function scan(){
   if(S.scanning) return; S.scanning=true;
   let ok=0;
-  if(!DEMO) S.feed=await fjson(PRICES_URL+'?t='+Math.floor(Date.now()/60000),6000).catch(()=>null);
+  if(!DEMO){
+    S.feed=null; S.feedFrom='';
+    if(S.cfg.helper&&!LOCAL){ /* programa del portátil (laptop/serve.py): precios de Yahoo cada minuto */
+      const l=await fjson('http://localhost:8765/prices.json',2500).catch(()=>null);
+      if(l&&l.updated&&(Date.now()/1000-l.updated)<300){ S.feed=l; S.feedFrom='local'; }
+    }
+    if(!S.feed){ S.feed=await fjson(PRICES_URL+'?t='+Math.floor(Date.now()/60000),6000).catch(()=>null); S.feedFrom='github'; }
+  }
   await Promise.all(SYMS.map(async s=>{
     try{
       const d = DEMO ? demoData(s) : (A[s].bn ? await loadBinance(s).catch(()=>loadYahoo(s)) : await loadYahoo(s));
-      S.closes[s]=d.closes; S.stale[s]=d.stale; S.px[s]=d.closes[d.closes.length-1]; ok++;
+      S.closes[s]=d.closes; S.stale[s]=d.stale; S.old[s]=!!d.old; S.px[s]=d.closes[d.closes.length-1]; ok++;
     }catch(e){ /* mantiene el último dato */ }
   }));
   S.online = ok>0; S.lastScan=Date.now(); S.scanning=false;
@@ -479,6 +490,7 @@ function renderTop(){
   const b=$('#banner');
   if(DEMO){ b.textContent='MODO DEMO · precios simulados, no reales'; b.classList.add('on'); }
   else if(!S.online && S.lastScan){ b.textContent='Sin datos de mercado (red/proxy). Reintentando…'; b.classList.add('on'); }
+  else if(SYMS.some(x=>S.old[x])){ const h=Math.round(feedAgeMin()/60*10)/10; b.textContent=`Acciones y metales con datos desfasados (hace ${h} h): el robot de GitHub no ha actualizado. Crypto en directo. Para acciones en directo activa "Programa del portátil" en Ajustes.`; b.classList.add('on'); }
   else b.classList.remove('on');
 }
 function renderLeft(){
@@ -488,7 +500,7 @@ function renderLeft(){
     const a=A[s], px=S.px[s], ch=change(s), hot=S.hits.includes(s);
     const tint=!px||S.stale[s]?['#3b3f4a','#22252c']:ch>=0?['#17803a','#0b3d1b']:['#a3202d','#4d0b13'];
     return `<div class="row${S.sel===s?' sel':''}${hot?' hot':''}" data-act="sel" data-v="${s}" style="--c1:${tint[0]};--c2:${tint[1]}">
-      <div class="l1 txt"><span>${s}${hot?'<span class="badge">🔥 FUERTE</span>':''}${S.stale[s]?'<span class="badge">cerrado</span>':''}</span><span>${px?'$'+num(px,dec(s,px)):'…'}</span></div>
+      <div class="l1 txt"><span>${s}${hot?'<span class="badge">🔥 FUERTE</span>':''}${S.old[s]?'<span class="badge">desfasado</span>':S.stale[s]?'<span class="badge">cerrado</span>':''}</span><span>${px?'$'+num(px,dec(s,px)):'…'}</span></div>
       <div class="l2 txt"><span>${a.cls} · máx ${a.max}x</span><span class="chg">${px?sgn(ch)+'%':''}</span></div></div>`;
   }).join('');
   el.scrollTop=st; el.scrollLeft=sl;
@@ -592,6 +604,8 @@ function viewSettings(c,r){
     <div class="panel"><div class="body">
     <div class="field"><span>Modo automático</span><button class="btn${C.auto?' on':''}" data-act="auto">${C.auto?'ON':'OFF'}</button></div>
     <div class="field"><span>Los agentes abren operaciones</span><button class="btn${C.exec?' on':''}" data-act="exec">${C.exec?'SÍ':'NO'}</button></div>
+    <div class="field"><span>Programa del portátil (acciones en directo)</span><button class="btn${C.helper?' on':''}" data-act="helper">${C.helper?'ON':'OFF'}</button></div>
+    <div class="desc">Solo si tienes abierto laptop/iniciar. El navegador puede pedir permiso para acceder a "dispositivos de la red local": acepta.</div>
     ${sl('win','Ventana Scout (min)',C.win,5,60,5)}${sl('thr','Sensibilidad (× umbral)',C.thr,.5,3,.25,x=>x.toFixed(2))}
     ${sl('rk','Riesgo por operación de los agentes (% equity)',C.rk,0.5,5,0.5,x=>x+'%')}<div class="desc">Los agentes eligen leverage, importe, SL y TP según volatilidad y confianza. Manual: </div>${sl('sl','Stop-loss manual %',C.sl,1,20,1)}${sl('tp','Take-profit manual %',C.tp,1,40,1)}
     </div></div>`;
@@ -620,6 +634,7 @@ document.addEventListener('click',e=>{ keepAwake();
   else if(a==='open'){ const pl=S.usePlan&&S.plan&&S.plan.sym===S.sel?S.plan:null; if(openPos(S.sel,v,S.margin,clamp(S.lev,1,MAXLEV),pl?'plan agentes':'manual',pl?pl.sl:S.cfg.sl,pl?pl.tp:S.cfg.tp)){ S.usePlan=false; tickAll(); renderMain(); } }
   else if(a==='run'){ runPipeline(S.sel,S.cfg.exec); }
   else if(a==='auto'){ S.cfg.auto=!S.cfg.auto; saveCfg(); toast(S.cfg.auto?'Auto ON: el Scout escanea cada ~1 min':'Auto OFF'); renderMain(); }
+  else if(a==='helper'){ S.cfg.helper=!S.cfg.helper; saveCfg(); toast(S.cfg.helper?'Buscando el programa del portátil…':'Programa del portátil desactivado'); S.lastScan=0; renderMain(); }
   else if(a==='exec'){ S.cfg.exec=!S.cfg.exec; saveCfg(); renderMain(); }
   else if(a==='scan'){ scan().then(renderMain); renderMain(); }
   else if(a==='sub'){ S.sub=v; renderMain(); }

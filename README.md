@@ -38,7 +38,8 @@ Los workflows programados solo corren desde la rama por defecto: haz merge a `ma
 1. Abre https://jessule.github.io/Bot/grok.html en Chrome o Edge.
 2. Pulsa el icono de **Instalar** (aparece a la derecha de la barra de direcciones, o menú ⋮ → *Instalar Grok Bot* / *Guardar y compartir → Instalar como app*).
 3. Ya tienes el icono "Grok Bot" en el escritorio / menú inicio: se abre como un programa, sin barra del navegador.
-Los precios reales llegan por el robot de GitHub cada 5 min. Deja la app abierta para que los agentes sigan trabajando.
+Crypto va en directo (Binance). Acciones y metales llegan por un robot de GitHub que **no es fiable en frecuencia** (GitHub limita las tareas programadas; puede tardar horas). Si están desfasados, la app lo avisa y no opera con ellos. Para acciones en directo usa el programa del portátil (abajo) y activa *Ajustes → Programa del portátil*.
+Deja la app abierta para que los agentes sigan trabajando.
 
 ### Alternativa: servidor local con precios cada minuto
 Sirve `grok.html` en tu propio equipo y baja Yahoo directamente desde tu portátil (sin proxies ni claves).
