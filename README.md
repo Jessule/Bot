@@ -33,3 +33,11 @@ Los precios los pide el propio navegador del móvil (Binance para crypto; Yahoo 
 `.github/workflows/prices.yml` baja cada 5 min las velas de Yahoo (yfinance) y las publica en la rama `prices` (`prices.json`);
 `grok.html` las lee de ahí (sin proxies ni claves) y usa los proxies solo como respaldo. Crypto va directo a Binance.
 Los workflows programados solo corren desde la rama por defecto: haz merge a `main`, luego Actions → prices → Run workflow, y activa Pages.
+
+## 💻 Versión para portátil (misma interfaz que el móvil)
+Sirve `grok.html` en tu propio equipo y baja los precios reales de Yahoo directamente desde tu portátil (sin proxies ni claves).
+1. Instala Python 3 si no lo tienes (https://www.python.org/downloads/, en Windows marca "Add Python to PATH").
+2. Descarga el repo (botón verde *Code* → *Download ZIP*) y descomprímelo.
+3. Windows: doble clic en `laptop/iniciar.bat`. Mac/Linux: `bash laptop/iniciar.sh`.
+4. Se abre `http://localhost:8765`. Deja la ventana negra abierta y la pestaña del navegador abierta: los agentes escanean cada 5 min.
+Para que no se duerma el portátil: Configuración → Energía → "Nunca suspender" mientras esté enchufado.
