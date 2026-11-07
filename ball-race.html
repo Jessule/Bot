@@ -8,6 +8,7 @@
   --page:#14131a;
   --paper:#ebe5da;
   --arena:#fcfaf3;
+  --grid:#e6e1d4;
   --ink:#1c1b1f;
   --muted:#5b574f;
   --blue:#2f7be0; --blue-d:#1d56a8; --blue-l:#6aa6f2;
@@ -52,7 +53,9 @@ body{
 .sub{font:700 2.3cqw/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:.3cqw 0 .8cqw;text-align:center}
 .box{
   position:relative;flex:1;min-height:0;width:100%;display:flex;flex-direction:column;
-  background:var(--arena);border:.9cqw solid var(--ink);border-radius:1.6cqw;overflow:hidden;
+  background-color:var(--arena);border:.9cqw solid var(--ink);border-radius:1.6cqw;overflow:hidden;
+  background-image:linear-gradient(var(--grid) .2cqw,transparent .2cqw),linear-gradient(90deg,var(--grid) .2cqw,transparent .2cqw);
+  background-size:5cqw 5cqw;
 }
 .arena{position:relative;flex:1;min-height:0}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
@@ -96,7 +99,7 @@ button:focus-visible{outline:3px solid var(--blue-l);outline-offset:2px}
 <div class="stage" id="stage">
   <div class="ask">
     <div class="cm"><div class="av"></div><b>Comment who will win</b></div>
-    <div class="chips"><span style="background:var(--blue)">DOUBLE</span><span style="background:var(--pink)">FIBONACCI</span><span style="background:var(--green)">TRIBONACCI</span></div>
+    <div class="chips"><span style="background:var(--blue)">DOUBLE</span><span style="background:var(--pink)">FACTORIAL</span><span style="background:var(--green)">TRIBONACCI</span></div>
   </div>
   <section class="lane" id="l-dbl"></section>
   <div class="vs">VS</div>
@@ -146,12 +149,12 @@ button:focus-visible{outline:3px solid var(--blue-l);outline-offset:2px}
       next:function(L){return 'SIGUIENTE: '+fmt(L.p)},
       hit:function(L,b){var d=L.p;L.p*=2;return d},
       label:function(){return 'x2'}},
-    {id:'l-fib',title:'FIBONACCI BALL',sub:'suma las dos últimas · 1, 1, 2, 3, 5, 8…',
-      init:function(L){L.a=1;L.b=1;L.balls=[mk(L)]},
-      next:function(L){return 'SIGUIENTE: '+fmt(L.a)},
-      hit:function(L){var d=L.a,n=L.a+L.b;L.a=L.b;L.b=n;return d},
-      label:function(){return 'F'}},
-    {id:'l-tri',title:'TRIBONACCI BALL',sub:'suma las tres últimas · 1, 1, 2, 4, 7, 13…',
+    {id:'l-fib',title:'FACTORIAL BALL',sub:'1!, 2!, 3!, 4! · 1, 2, 6, 24, 120…',
+      init:function(L){L.n=1;L.f=1;L.balls=[mk(L)]},
+      next:function(L){return 'SIGUIENTE: '+L.n+'! = '+fmt(L.f)},
+      hit:function(L){var d=L.f;L.n++;L.f*=L.n;return d},
+      label:function(){return '!'}},
+    {id:'l-tri',spd:1.15,title:'TRIBONACCI BALL',sub:'suma las tres últimas · 1, 1, 2, 4, 7, 13…',
       init:function(L){L.a=1;L.b=1;L.c=2;L.balls=[mk(L)]},
       next:function(L){return 'SIGUIENTE: '+fmt(L.a)},
       hit:function(L){var d=L.a,n=L.a+L.b+L.c;L.a=L.b;L.b=L.c;L.c=n;return d},
@@ -208,9 +211,10 @@ button:focus-visible{outline:3px solid var(--blue-l);outline-offset:2px}
     }
   }
 
-  function step(dt){
+  function step(dt0){
     lanes.forEach(function(L){
       if(L.done)return;
+      var dt=dt0*(L.d.spd||1);
       var w=L.cw,h=L.ch,R=L.R,g=G_K*h,floor=h-R,vmin=Math.sqrt(2*g*h*0.5),i,j;
       var bs=L.balls.slice();
       for(i=0;i<bs.length;i++){
@@ -248,11 +252,6 @@ button:focus-visible{outline:3px solid var(--blue-l);outline-offset:2px}
     var g=L.ctx,R=L.R;g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,cw,ch);
     if(!L.col){var css=getComputedStyle(L.el);L.col=css.getPropertyValue('--c').trim();L.cd=css.getPropertyValue('--c-d').trim()}
     var col=L.col,cd=L.cd;
-    var step_=Math.max(14,Math.round(cw/16));
-    g.strokeStyle='#e6e1d4';g.lineWidth=1;g.beginPath();
-    for(var x=0;x<=cw;x+=step_){g.moveTo(x+.5,0);g.lineTo(x+.5,ch)}
-    for(var y=0;y<=ch;y+=step_){g.moveTo(0,y+.5);g.lineTo(cw,y+.5)}
-    g.stroke();
     L.balls.forEach(function(b){
       b.tr.push(b.x,b.y);if(b.tr.length>14)b.tr.splice(0,2);
       for(var k=0;k<b.tr.length;k+=2){
