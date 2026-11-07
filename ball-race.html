@@ -12,7 +12,7 @@
   --muted:#5b574f;
   --blue:#2f7be0; --blue-d:#1d56a8; --blue-l:#6aa6f2;
   --pink:#d62a74; --pink-d:#9c1655; --pink-l:#ec6aa3;
-  --orange:#e8571a; --orange-d:#a53408; --orange-l:#f59a66;
+  --green:#22a35a; --green-d:#147040; --green-l:#5fcf8f;
   --display:'Lilita One','Arial Black',Impact,sans-serif;
   --mono:'Space Mono',ui-monospace,Menlo,Consolas,monospace;
   color-scheme:light;
@@ -38,7 +38,7 @@ body{
   display:flex;align-items:center;gap:2cqw;background:#fff;border:.7cqw solid var(--ink);
   border-radius:6cqw;padding:1.2cqw 3.5cqw 1.2cqw 1.4cqw;box-shadow:0 .8cqw 0 var(--ink);
 }
-.av{width:6.5cqw;height:6.5cqw;border-radius:50%;background:conic-gradient(var(--blue) 0 33%,var(--pink) 0 66%,var(--orange) 0);border:.5cqw solid var(--ink)}
+.av{width:6.5cqw;height:6.5cqw;border-radius:50%;background:conic-gradient(var(--blue) 0 33%,var(--pink) 0 66%,var(--green) 0);border:.5cqw solid var(--ink)}
 .cm b{font:400 5.6cqw/1 var(--display);letter-spacing:.2px}
 .chips{display:flex;gap:2cqw;font:700 2.6cqw/1 var(--mono);color:#fff}
 .chips span{padding:.9cqw 2.2cqw;border-radius:5cqw;border:.5cqw solid var(--ink)}
@@ -60,8 +60,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
   position:absolute;left:1.6cqw;top:1.6cqw;font:700 2.4cqw/1 var(--mono);color:var(--c-d);
   background:var(--arena);border:.5cqw solid var(--c-d);border-radius:5cqw;padding:.8cqw 2cqw;
 }
-.bars{display:flex;flex-direction:column;gap:.4cqw;background:var(--ink);border-top:.7cqw solid var(--ink)}
-.hp{position:relative;height:5.6cqw;background:var(--c-d);overflow:hidden}
+.bars{display:flex;flex-direction:column}
+.hp{position:relative;height:6.2cqw;border-top:.6cqw solid var(--ink);background:var(--c-d);overflow:hidden}
 .hp .fill{position:absolute;inset:0 auto 0 0;width:100%;background:linear-gradient(var(--c-l) 0 18%,var(--c) 18% 100%)}
 .hp .n{
   position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -80,7 +80,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 
 #l-dbl{--c:var(--blue);--c-d:var(--blue-d);--c-l:var(--blue-l)}
 #l-fib{--c:var(--pink);--c-d:var(--pink-d);--c-l:var(--pink-l)}
-#l-dice{--c:var(--orange);--c-d:var(--orange-d);--c-l:var(--orange-l)}
+#l-tri{--c:var(--green);--c-d:var(--green-d);--c-l:var(--green-l)}
 
 .ctl{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
 .ctl .st{font:700 12px var(--mono);color:#cfcbd8;min-width:100%;text-align:center}
@@ -96,30 +96,30 @@ button:focus-visible{outline:3px solid var(--blue-l);outline-offset:2px}
 <div class="stage" id="stage">
   <div class="ask">
     <div class="cm"><div class="av"></div><b>Comment who will win</b></div>
-    <div class="chips"><span style="background:var(--blue)">DOUBLE</span><span style="background:var(--pink)">FIBONACCI</span><span style="background:var(--orange)">DICE</span></div>
+    <div class="chips"><span style="background:var(--blue)">DOUBLE</span><span style="background:var(--pink)">FIBONACCI</span><span style="background:var(--green)">TRIBONACCI</span></div>
   </div>
   <section class="lane" id="l-dbl"></section>
   <div class="vs">VS</div>
   <section class="lane" id="l-fib"></section>
   <div class="vs">VS</div>
-  <section class="lane" id="l-dice"></section>
+  <section class="lane" id="l-tri"></section>
 </div>
 
 <div class="ctl">
   <div class="st" id="status">Carrera en curso</div>
   <button id="restart">Reiniciar</button>
-  <button class="spd" data-s="1" aria-pressed="false">x1</button>
-  <button class="spd" data-s="2" aria-pressed="true">x2</button>
+  <button class="spd" data-s="1" aria-pressed="true">x1</button>
+  <button class="spd" data-s="2" aria-pressed="false">x2</button>
   <button class="spd" data-s="4" aria-pressed="false">x4</button>
 </div>
 
 <script>
 (function(){
   var LAYERS=[159992,61e9,250e15];
-  var speedMul=2;
-  var G_K=9;          // gravity = G_K * arena height per s^2
+  var speedMul=1;
+  var G_K=4.5;        // gravity = G_K * arena height per s^2
   var REST=0.95;      // bounce restitution
-  var VX_K=0.55;      // horizontal speed as fraction of width per s
+  var VX_K=0.32;      // horizontal speed as fraction of width per s
 
   var CROWN='<svg class="crown" viewBox="0 0 30 22"><path d="M2 18 0 4l8 7 7-10 7 10 8-7-2 14z" fill="#f2b21c" stroke="#1c1b1f" stroke-width="2" stroke-linejoin="round"/></svg>';
 
@@ -151,11 +151,11 @@ button:focus-visible{outline:3px solid var(--blue-l);outline-offset:2px}
       next:function(L){return 'SIGUIENTE: '+fmt(L.a)},
       hit:function(L){var d=L.a,n=L.a+L.b;L.a=L.b;L.b=n;return d},
       label:function(){return 'F'}},
-    {id:'l-dice',title:'DICE BALL',sub:'x1 a x6 · tirada aleatoria cada golpe',die:true,
-      init:function(L){L.p=1;L.balls=[mk(L)]},
-      next:function(L){return 'SIGUIENTE: '+fmt(L.p)+' x ?'},
-      hit:function(L,b){var r=1+Math.floor(Math.random()*6);b.roll=r;L.p*=r;return L.p},
-      label:function(){return ''}}
+    {id:'l-tri',title:'TRIBONACCI BALL',sub:'suma las tres últimas · 1, 1, 2, 4, 7, 13…',
+      init:function(L){L.a=1;L.b=1;L.c=2;L.balls=[mk(L)]},
+      next:function(L){return 'SIGUIENTE: '+fmt(L.a)},
+      hit:function(L){var d=L.a,n=L.a+L.b+L.c;L.a=L.b;L.b=L.c;L.c=n;return d},
+      label:function(){return 'T'}}
   ];
 
   var lanes=[];
@@ -223,10 +223,10 @@ button:focus-visible{outline:3px solid var(--blue-l);outline-offset:2px}
         if(b.y<R){b.y=R;b.vy=Math.abs(b.vy)*REST;hit=true}
         if(b.y>floor){
           b.y=floor;b.vy=-Math.max(Math.abs(b.vy)*REST,vmin);
-          b.vx+=(Math.random()-.5)*w*0.25;
+          b.vx+=(Math.random()-.5)*w*0.15;
           hit=true;
         }
-        var minVx=w*0.18;
+        var minVx=w*0.1;
         if(Math.abs(b.vx)<minVx)b.vx=(b.vx<0?-1:1)*minVx;
         if(hit){
           damage(L,L.d.hit(L,b),b.x,b.y);
