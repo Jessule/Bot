@@ -70,7 +70,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
   position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font:700 3.6cqw/1 var(--mono);color:#fff;-webkit-text-stroke:.8cqw var(--ink);paint-order:stroke fill;
 }
-.hp.dead{visibility:hidden}
+.hp.dead{display:none}
 .finish{height:2cqw;border-top:.5cqw solid var(--ink);background:repeating-conic-gradient(var(--ink) 0 25%,var(--arena) 0 50%) 0 0/2cqw 2cqw}
 .lane.done .finish{background:var(--c)}
 .banner{
@@ -217,7 +217,7 @@ button:focus-visible{outline:3px solid var(--blue-l);outline-offset:2px}
       if(L.hp[L.layer]<=0.5){L.hp[L.layer]=0;L.layer++}
     }
     if(L.layer>=LAYERS.length&&!L.done){
-      L.done=true;L.finishT=t;L.texts=[];L.el.classList.add('done');
+      L.done=true;L.finishT=t;L.texts=[];L.balls.forEach(function(q){q.sq=0;q.tr=[]});L.el.classList.add('done');
       L.banner.textContent=t.toFixed(1)+' s';
       if(!winner){winner=L;document.getElementById('status').textContent='Gana '+L.d.title+' en '+t.toFixed(1)+' s'}
     }
